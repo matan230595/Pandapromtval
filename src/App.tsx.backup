@@ -1,0 +1,2540 @@
+import React, { useState, useEffect, useRef } from "react";
+import {
+  Plus,
+  Search,
+  Sparkles,
+  Mic,
+  MicOff,
+  Volume2,
+  VolumeX,
+  Upload,
+  Download,
+  BookOpen,
+  Image as ImageIcon,
+  Copy,
+  Check,
+  Folder as FolderIcon,
+  FolderPlus,
+  Heart,
+  Trash2,
+  Edit3,
+  Settings,
+  Sun,
+  Moon,
+  ChevronLeft,
+  ChevronRight,
+  Play,
+  Square,
+  Save,
+  ArrowLeft,
+  Share2,
+  FileText,
+  Database,
+  Code,
+  PenTool,
+  Activity,
+  Info,
+  X,
+  Send,
+  RefreshCw,
+  Sliders,
+  Filter
+} from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { Prompt, Folder, PlatformConfig, ChatMessage } from "./types";
+
+// Setup platforms config
+const PLATFORMS: Record<string, PlatformConfig> = {
+  ChatGPT: { id: "ChatGPT", name: "ChatGPT", color: "#10a37f", bgColor: "bg-[#10a37f]/10", textColor: "text-[#10a37f]" },
+  Claude: { id: "Claude", name: "Claude", color: "#d9775f", bgColor: "bg-[#d9775f]/10", textColor: "text-[#d9775f]" },
+  Gemini: { id: "Gemini", name: "Gemini", color: "#1a73e8", bgColor: "bg-[#1a73e8]/10", textColor: "text-[#1a73e8]" },
+  Midjourney: { id: "Midjourney", name: "Midjourney", color: "#ff007f", bgColor: "bg-[#ff007f]/10", textColor: "text-[#ff007f]" },
+  "DALL-E": { id: "DALL-E", name: "DALL-E", color: "#9c27b0", bgColor: "bg-[#9c27b0]/10", textColor: "text-[#9c27b0]" },
+  Nvidia: { id: "Nvidia", name: "Nvidia", color: "#76b900", bgColor: "bg-[#76b900]/10", textColor: "text-[#76b900]" },
+  Groq: { id: "Groq", name: "Groq", color: "#f55036", bgColor: "bg-[#f55036]/10", textColor: "text-[#f55036]" },
+  OpenRouter: { id: "OpenRouter", name: "OpenRouter", color: "#3b82f6", bgColor: "bg-blue-500/10", textColor: "text-blue-500" },
+  HuggingFace: { id: "HuggingFace", name: "HuggingFace", color: "#ffd21e", bgColor: "bg-[#ffd21e]/10", textColor: "text-yellow-600" },
+  General: { id: "General", name: "כללי", color: "#64748b", bgColor: "bg-[#64748b]/10", textColor: "text-[#64748b]" }
+};
+
+// Initial setup default templates in Hebrew
+const INITIAL_FOLDERS: Folder[] = [
+  { id: "work", name: "עבודה ופיתוח" },
+  { id: "writing", name: "כתיבת תוכן ושיווק" },
+  { id: "personal", name: "אישי ופנאי" },
+  { id: "design", name: "עיצוב ויצירת תמונות" }
+];
+
+const INITIAL_PROMPTS: Prompt[] = [
+  {
+    id: "p1",
+    title: "ניתוח ושיפור קוד מקור (רוויו)",
+    content: "אתה מהנדס תוכנה בכיר וארכיטקט מערכות. אנא נתח את הקוד הבא הכתוב בשפת $(LANGUAGE) לפרטי פרטים. זהה בעיות ביצועים, בעיות אבטחה ופוטנציאל לבאגים, והצע שיפורים קונקרטיים.\n\nהנה הקוד:\n```$(LANGUAGE)\n$(CODE)\n```",
+    platform: "Gemini",
+    tags: ["פיתוח", "קוד", "Review"],
+    folder: "work",
+    favorite: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    useCount: 12
+  },
+  {
+    id: "p2",
+    title: "כתיבת פוסט שיווקי לרשתות חברתיות",
+    content: "כתוב פוסט שיווקי ומרתק עבור רשת $(PLATFORM) בנושא: $(TOPIC).\nקהל היעד הוא $(AUDIENCE) וטון הכתיבה צריך להיות $(TONE).\nהקפד להשתמש באימוג'ים מתאימים, כותרת שתתפוס את העין, והנעה ברורה לפעולה בסוף הפוסט.",
+    platform: "Claude",
+    tags: ["שיווק", "פוסט", "כתיבה"],
+    folder: "writing",
+    favorite: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    useCount: 5
+  },
+  {
+    id: "p3",
+    title: "אופטימיזציה של קורות חיים ל-ATS",
+    content: "אני מגיש מועמדות למשרת $(ROLE) בחברת $(COMPANY). הנה קורות החיים הנוכחיים שלי:\n$(RESUME)\n\nוהנה תיאור המשרה:\n$(JOB_DESCRIPTION)\n\nאנא התאם את קורות החיים שלי למשרה, הדגש מילות מפתח קריטיות למערכות ATS, והצע שינויים ממוקדים לשיפור סיכויי הקבלה שלי.",
+    platform: "ChatGPT",
+    tags: ["קריירה", "קורות חיים", "ATS"],
+    folder: "work",
+    favorite: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    useCount: 8
+  },
+  {
+    id: "p4",
+    title: "צילום ריאליסטי מרהיב במידג'רני",
+    content: "A cinematic hyper-realistic photograph of $(SUBJECT) in $(ENVIRONMENT). Shot on 85mm lens, f/1.4, detailed features, dramatic soft lightning, volumetric dust, Unreal Engine 5 render, highly detailed, 8k resolution --ar $(ASPECT_RATIO) --v 6.0",
+    platform: "Midjourney",
+    tags: ["עיצוב", "תמונה", "ריאליסטי"],
+    folder: "design",
+    favorite: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    useCount: 15
+  }
+];
+
+export default function App() {
+  // Navigation active tab
+  const [activeTab, setActiveTab] = useState<"library" | "guide" | "settings">("library");
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+
+
+  // Custom Provider API Keys States
+  const [customGeminiKey, setCustomGeminiKey] = useState<string>(() => {
+    return localStorage.getItem("promptvault_custom_gemini_key") || "";
+  });
+  const [customOpenaiKey, setCustomOpenaiKey] = useState<string>(() => {
+    return localStorage.getItem("promptvault_custom_openai_key") || "";
+  });
+  const [customClaudeKey, setCustomClaudeKey] = useState<string>(() => {
+    return localStorage.getItem("promptvault_custom_claude_key") || "";
+  });
+  const [customCohereKey, setCustomCohereKey] = useState<string>(() => {
+    return localStorage.getItem("promptvault_custom_cohere_key") || "";
+  });
+  const [useCustomKeys, setUseCustomKeys] = useState<boolean>(() => {
+    return localStorage.getItem("promptvault_use_custom_keys") === "true";
+  });
+  const [ttsVoice, setTtsVoice] = useState<string>(() => {
+    return localStorage.getItem("promptvault_tts_voice") || "Kore";
+  });
+
+  // Theme state
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    const saved = localStorage.getItem("promptvault_dark");
+    return saved === "true";
+  });
+
+  // Database states
+  const [prompts, setPrompts] = useState<Prompt[]>(() => {
+    const saved = localStorage.getItem("promptvault_prompts");
+    return saved ? JSON.parse(saved) : INITIAL_PROMPTS;
+  });
+
+  const [folders, setFolders] = useState<Folder[]>(() => {
+    const saved = localStorage.getItem("promptvault_folders");
+    return saved ? JSON.parse(saved) : INITIAL_FOLDERS;
+  });
+
+  // UI Filter states
+  const [activeFolder, setActiveFolder] = useState<string>("all");
+  const [activePlatform, setActivePlatform] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<"date" | "useCount" | "alpha">("date");
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState<boolean>(false);
+
+  // Active Screens / Modals
+  
+  const [isAiGeneratorOpen, setIsAiGeneratorOpen] = useState<boolean>(false);
+const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  const [editingPrompt, setEditingPrompt] = useState<Partial<Prompt> | null>(null);
+  const [isCompareMode, setIsCompareMode] = useState(false);
+  const [compareSelection, setCompareSelection] = useState<Prompt[]>([]);
+  const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
+  
+
+  // Global Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+N or Cmd+N
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        setEditingPrompt({
+          title: "",
+          content: "",
+          platform: "General",
+          tags: [],
+          folder: folders[0]?.id || "work"
+        });
+        setIsEditModalOpen(true);
+      }
+      
+      // Ctrl+F or Cmd+F
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        document.getElementById('searchInput')?.focus();
+      }
+      
+      // Escape
+      if (e.key === 'Escape') {
+        if (isEditModalOpen) setIsEditModalOpen(false);
+        else if (isAiGeneratorOpen) setIsAiGeneratorOpen(false);
+        else if (isCompareMode && compareSelection.length === 2) setCompareSelection([]);
+        else if (selectedPrompt) setSelectedPrompt(null);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isEditModalOpen, isAiGeneratorOpen, isCompareMode, compareSelection, selectedPrompt, folders]);
+
+  // Auto-suggest tags based on content
+  useEffect(() => {
+    if (editingPrompt?.content) {
+      const content = editingPrompt.content.toLowerCase();
+      const suggestions = new Set<string>();
+      
+      const keywordMap = {
+        'פיתוח': ['קוד', 'תכנות', 'פיתוח', 'react', 'javascript', 'python', 'html', 'css', 'api'],
+        'שיווק': ['שיווק', 'קמפיין', 'פרסום', 'seo', 'לידים', 'מכירות'],
+        'כתיבה': ['מאמר', 'פוסט', 'בלוג', 'כתיבה', 'תוכן', 'עריכה'],
+        'עיצוב': ['עיצוב', 'תמונה', 'לוגו', 'ui', 'ux', 'midjourney', 'dalle'],
+        'עסקים': ['עסקים', 'ניהול', 'אסטרטגיה', 'יזמות', 'תוכנית', 'תקציב'],
+        'תרגום': ['תרגם', 'תרגום', 'אנגלית', 'עברית', 'שפות']
+      };
+      
+      for (const [tag, keywords] of Object.entries(keywordMap)) {
+        if (keywords.some(kw => content.includes(kw))) {
+          suggestions.add(tag);
+        }
+      }
+      
+      const currentTags = editingPrompt.tags || [];
+      const newSuggestions = Array.from(suggestions).filter(tag => !currentTags.includes(tag));
+      setSuggestedTags(newSuggestions);
+    } else {
+      setSuggestedTags([]);
+    }
+  }, [editingPrompt?.content, editingPrompt?.tags]);
+
+  const [newFolderName, setNewFolderName] = useState<string>("");
+  const [isNewFolderOpen, setIsNewFolderOpen] = useState<boolean>(false);
+
+  // Active Variable Filler State
+  const [variableValues, setVariableValues] = useState<Record<string, string>>({});
+
+  // TTS State
+  const [isTtsPlaying, setIsTtsPlaying] = useState<boolean>(false);
+  const [audioBase64, setAudioBase64] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Audio Recording State for Speech-To-Text
+  const [isRecording, setIsRecording] = useState<boolean>(false);
+  const [activeRecordingField, setActiveRecordingField] = useState<string | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
+  // AI Prompt Generator / Vision State
+  const [aiDescription, setAiDescription] = useState<string>("");
+  const [aiGenerating, setAiGenerating] = useState<boolean>(false);
+  const [visionImage, setVisionImage] = useState<string | null>(null);
+  const [visionMimeType, setVisionMimeType] = useState<string>("image/jpeg");
+
+  // Copy success animation state
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Chat Playground Playground state
+  const [currentChatPrompt, setCurrentChatPrompt] = useState<string>("");
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [isChatPlaygroundOpen, setIsChatPlaygroundOpen] = useState<boolean>(false);
+  const [isChatSending, setIsChatSending] = useState<boolean>(false);
+  const [chatModelType, setChatModelType] = useState<"flash" | "pro">("flash");
+  const [isApiKeyHealthy, setIsApiKeyHealthy] = useState<boolean>(true);
+
+  // Connection Test State inside settings
+  const [testConnectionStatus, setTestConnectionStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
+  const [testConnectionMessage, setTestConnectionMessage] = useState<string>("");
+
+  // DB Backup File Import Input Ref
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Single Prompt File Import Input Ref
+  const fileInputRefSingle = useRef<HTMLInputElement>(null);
+
+  // Custom fetch to append user API keys if configured
+  const apiFetch = async (url: string, options: RequestInit = {}) => {
+    const headers = {
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    } as Record<string, string>;
+
+    if (useCustomKeys && customGeminiKey) {
+      headers["x-gemini-api-key"] = customGeminiKey;
+    }
+
+    return fetch(url, {
+      ...options,
+      headers,
+    });
+  };
+
+  // Persistence triggers
+  useEffect(() => {
+    localStorage.setItem("promptvault_prompts", JSON.stringify(prompts));
+  }, [prompts]);
+
+  useEffect(() => {
+    localStorage.setItem("promptvault_folders", JSON.stringify(folders));
+  }, [folders]);
+
+  useEffect(() => {
+    localStorage.setItem("promptvault_dark", String(darkMode));
+    if (darkMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [darkMode]);
+
+  // Check health on load and when keys configuration changes
+  useEffect(() => {
+    apiFetch("/api/health")
+      .then((res) => res.json())
+      .then((data) => {
+        setIsApiKeyHealthy(data.hasApiKey);
+      })
+      .catch((err) => {
+        console.error("Health check error:", err);
+        setIsApiKeyHealthy(false);
+      });
+  }, [useCustomKeys, customGeminiKey]);
+
+  // Collect all unique tags
+  const allTags = Array.from(new Set(prompts.flatMap((p) => p.tags || [])));
+
+  // Filter and sort logic
+  const filteredPrompts = prompts
+    .filter((p) => {
+      // Folder Filter
+      if (activeFolder === "favorites") return p.favorite;
+      if (activeFolder !== "all" && p.folder !== activeFolder) return false;
+      return true;
+    })
+    .filter((p) => {
+      // Platform Filter
+      if (activePlatform !== "all" && p.platform !== activePlatform) return false;
+      return true;
+    })
+    .filter((p) => {
+      // Favorite quick filter
+      if (showFavoritesOnly && !p.favorite) return false;
+      return true;
+    })
+    .filter((p) => {
+      // Tag filter
+      if (selectedTag && !p.tags.includes(selectedTag)) return false;
+      return true;
+    })
+    .filter((p) => {
+      // Search search query (title, content, tags)
+      if (!searchQuery) return true;
+      const query = searchQuery.toLowerCase();
+      return (
+        p.title.toLowerCase().includes(query) ||
+        p.content.toLowerCase().includes(query) ||
+        p.tags.some((t) => t.toLowerCase().includes(query))
+      );
+    })
+    .sort((a, b) => {
+      if (sortOrder === "date") {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+      if (sortOrder === "useCount") {
+        return b.useCount - a.useCount;
+      }
+      return a.title.localeCompare(b.title, "he");
+    });
+
+  // Extract variables from content
+  const extractVariables = (text: string): string[] => {
+    const matches = text.match(/\$\([a-zA-Z0-9_]+\)/g) || [];
+    // Strip external formatting $(...)
+    return Array.from(
+      new Set(matches.map((v) => v.substring(2, v.length - 1)))
+    );
+  };
+
+  // Get active prompt variables
+  const activeVariables = selectedPrompt ? extractVariables(selectedPrompt.content) : [];
+
+  // Reset variable values when selected prompt changes
+  useEffect(() => {
+    if (selectedPrompt) {
+      const vars = extractVariables(selectedPrompt.content);
+      const initial: Record<string, string> = {};
+      vars.forEach((v) => {
+        initial[v] = "";
+      });
+      setVariableValues(initial);
+      stopAudio();
+    }
+  }, [selectedPrompt]);
+
+  // Substitute variables into the template in real time
+  const getResolvedPrompt = (): string => {
+    if (!selectedPrompt) return "";
+    let res = selectedPrompt.content;
+    Object.entries(variableValues).forEach(([key, val]) => {
+      const placeholder = `$(${key})`;
+      res = res.replaceAll(placeholder, val || `[${key}]`);
+    });
+    return res;
+  };
+
+  // Substitute variables into the template highlighting values in colored spans
+  const getHighlightedPromptHTML = (): React.ReactNode[] => {
+    if (!selectedPrompt) return [];
+    const text = selectedPrompt.content;
+    const parts = text.split(/(\$\([a-zA-Z0-9_]+\))/g);
+
+    return parts.map((part, index) => {
+      const match = part.match(/^\$\(([a-zA-Z0-9_]+)\)$/);
+      if (match) {
+        const varName = match[1];
+        const val = variableValues[varName];
+        return (
+          <span
+            key={index}
+            className={`mx-1 px-1.5 py-0.5 rounded text-sm font-medium transition-all duration-200 ${
+              val
+                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 ring-1 ring-emerald-300"
+                : "bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 ring-1 ring-dashed ring-amber-400"
+            }`}
+          >
+            {val || varName}
+          </span>
+        );
+      }
+      return <span key={index}>{part}</span>;
+    });
+  };
+
+  // Copy helper
+  const handleCopy = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+
+    // Increment usage count of prompt
+    if (selectedPrompt && selectedPrompt.id === id) {
+      setPrompts((prev) =>
+        prev.map((p) =>
+          p.id === id ? { ...p, useCount: p.useCount + 1, updatedAt: new Date().toISOString() } : p
+        )
+      );
+    }
+  };
+
+  // Toggle favorite
+  const toggleFavorite = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setPrompts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, favorite: !p.favorite } : p))
+    );
+    if (selectedPrompt && selectedPrompt.id === id) {
+      setSelectedPrompt((prev) => (prev ? { ...prev, favorite: !prev.favorite } : null));
+    }
+  };
+
+  // New Folder creation
+  const handleCreateFolder = () => {
+    if (!newFolderName.trim()) return;
+    const newFolder: Folder = {
+      id: "folder_" + Date.now(),
+      name: newFolderName.trim()
+    };
+    setFolders((prev) => [...prev, newFolder]);
+    setNewFolderName("");
+    setIsNewFolderOpen(false);
+  };
+
+  // Edit or Create Prompt save handler
+  const handleSavePrompt = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPrompt?.title || !editingPrompt?.content) return;
+
+    if (editingPrompt.id) {
+      // Edit mode
+      setPrompts((prev) =>
+        prev.map((p) =>
+          p.id === editingPrompt.id
+            ? {
+                ...(p as Prompt),
+                ...editingPrompt,
+                updatedAt: new Date().toISOString()
+              }
+            : p
+        )
+      );
+      if (selectedPrompt?.id === editingPrompt.id) {
+        setSelectedPrompt({
+          ...selectedPrompt,
+          ...editingPrompt,
+          updatedAt: new Date().toISOString()
+        } as Prompt);
+      }
+    } else {
+      // Create mode
+      const newPrompt: Prompt = {
+        id: "prompt_" + Date.now(),
+        title: editingPrompt.title,
+        content: editingPrompt.content,
+        platform: editingPrompt.platform || "General",
+        tags: editingPrompt.tags || [],
+        folder: editingPrompt.folder || "work",
+        favorite: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        useCount: 0
+      };
+      setPrompts((prev) => [newPrompt, ...prev]);
+    }
+
+    setIsEditModalOpen(false);
+    setEditingPrompt(null);
+  };
+
+  // Delete prompt
+  const handleDeletePrompt = (id: string) => {
+    if (confirm("האם אתה בטוח שברצונך למחוק פרומפט זה?")) {
+      setPrompts((prev) => prev.filter((p) => p.id !== id));
+      if (selectedPrompt?.id === id) {
+        setSelectedPrompt(null);
+      }
+    }
+  };
+
+  // TTS Readout function
+  const playTts = async () => {
+    if (!selectedPrompt) return;
+    const textToSpeak = getResolvedPrompt();
+
+    try {
+      setIsTtsPlaying(true);
+      const response = await apiFetch("/api/gemini/tts", {
+        method: "POST",
+        body: JSON.stringify({ text: textToSpeak, voice: ttsVoice })
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Failed to generate speech");
+      }
+
+      const data = await response.json();
+      const base64 = data.audio;
+
+      // Stop previous audio
+      stopAudio();
+
+      // Play audio in browser
+      const audioUrl = `data:audio/mp3;base64,${base64}`;
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+      audio.play();
+
+      audio.onended = () => {
+        setIsTtsPlaying(false);
+      };
+    } catch (err: any) {
+      console.error(err);
+      alert("שגיאה בהקראת הפרומפט: " + err.message);
+      setIsTtsPlaying(false);
+    }
+  };
+
+  const stopAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    setIsTtsPlaying(false);
+  };
+
+  // Audio recording handlers for Speech-To-Text
+  const startRecording = async (fieldName: string) => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = async () => {
+          const base64data = reader.result?.toString().split(",")[1];
+          if (base64data) {
+            await transcribeAudio(base64data, fieldName);
+          }
+        };
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setActiveRecordingField(fieldName);
+    } catch (err) {
+      console.error("Microphone access error:", err);
+      alert("לא ניתן לגשת למיקרופון. אנא ודא שהרשאות מיקרופון מאושרות.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      // Keep track of which field we are putting it into
+    }
+  };
+
+  const transcribeAudio = async (base64Audio: string, fieldName: string) => {
+    try {
+      const response = await apiFetch("/api/gemini/transcribe", {
+        method: "POST",
+        body: JSON.stringify({ audio: base64Audio, mimeType: "audio/webm" })
+      });
+
+      if (!response.ok) {
+        throw new Error("שגיאה בתרגום השמע");
+      }
+
+      const data = await response.json();
+      const text = data.text;
+
+      if (text) {
+        if (fieldName === "aiDescription") {
+          setAiDescription((prev) => (prev ? prev + " " + text : text));
+        } else if (fieldName === "promptBuilderContent") {
+          setEditingPrompt((prev) => ({
+            ...prev,
+            content: prev?.content ? prev.content + " " + text : text
+          }));
+        } else {
+          // Put into variable form input
+          setVariableValues((prev) => ({
+            ...prev,
+            [fieldName]: prev[fieldName] ? prev[fieldName] + " " + text : text
+          }));
+        }
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert("שגיאה בתרגום השמע: " + err.message);
+    } finally {
+      setActiveRecordingField(null);
+    }
+  };
+
+  // AI Prompt Enhancer (Gemini Pro Thinking Mode)
+  const enhanceActivePromptTemplate = async () => {
+    if (!editingPrompt?.content) return;
+    try {
+      setAiGenerating(true);
+      const response = await apiFetch("/api/gemini/enhance", {
+        method: "POST",
+        body: JSON.stringify({
+          promptText: editingPrompt.content,
+          mode: "enhance"
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("כשל בשדרוג הפרומפט");
+      }
+
+      const data = await response.json();
+      setEditingPrompt((prev) => ({ ...prev, content: data.text }));
+    } catch (err: any) {
+      alert("שגיאה בשדרוג: " + err.message);
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
+  // Image upload and analysis (Vision Gemini Pro)
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setVisionMimeType(file.type);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setVisionImage(reader.result?.toString().split(",")[1] || null);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const generatePromptFromAi = async () => {
+    try {
+      setAiGenerating(true);
+      let response;
+
+      if (visionImage) {
+        // Run Vision analysis
+        response = await apiFetch("/api/gemini/analyze-image", {
+          method: "POST",
+          body: JSON.stringify({
+            image: visionImage,
+            mimeType: visionMimeType
+          })
+        });
+      } else {
+        // Run Text description builder with High Thinking Mode
+        if (!aiDescription.trim()) return;
+        response = await apiFetch("/api/gemini/enhance", {
+          method: "POST",
+          body: JSON.stringify({
+            mode: "create",
+            description: aiDescription
+          })
+        });
+      }
+
+      if (!response.ok) {
+        throw new Error("שגיאה בהפקת פרומפט מה-AI");
+      }
+
+      const data = await response.json();
+
+      setEditingPrompt({
+        title: visionImage ? "פרומפט מתוך תמונה" : "פרומפט מבוסס AI: " + aiDescription.slice(0, 30) + "...",
+        content: data.text,
+        platform: "General",
+        tags: ["AI", "מכונה"],
+        folder: "work"
+      });
+
+      setIsAiGeneratorOpen(false);
+      setIsEditModalOpen(true);
+      setAiDescription("");
+      setVisionImage(null);
+    } catch (err: any) {
+      alert("כשל ביצירת הפרומפט: " + err.message);
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
+  // Chat Playground (Testing playground)
+  const startChatPlayground = () => {
+    if (!selectedPrompt) return;
+    const resolved = getResolvedPrompt();
+    setChatMessages([
+      { id: "msg_system", role: "assistant", content: `הפרומפט הוזן בהצלחה! צ'אט בוט הניסוי מוכן לבדוק את הפרומפט שלך.\n\nהפרומפט הפעיל הוא:\n\`\`\`\n${resolved}\n\`\`\``, timestamp: new Date().toLocaleTimeString("he-IL") }
+    ]);
+    setCurrentChatPrompt("");
+    setIsChatPlaygroundOpen(true);
+  };
+
+  const sendChatMessage = async () => {
+    if (!currentChatPrompt.trim() || isChatSending) return;
+
+    const userMsg: ChatMessage = {
+      id: "msg_" + Date.now(),
+      role: "user",
+      content: currentChatPrompt,
+      timestamp: new Date().toLocaleTimeString("he-IL")
+    };
+
+    const updatedMessages = [...chatMessages, userMsg];
+    setChatMessages(updatedMessages);
+    setCurrentChatPrompt("");
+    setIsChatSending(true);
+
+    try {
+      // Resolve prompt template instructions to send as system instruction
+      const systemInstruction = `You are a helpful AI Assistant playing the role requested. Test and respond to the user based on their active prompt structure:\n\n${getResolvedPrompt()}`;
+
+      // Drop the initial welcoming message from messages history sent to Gemini API
+      const apiMessages = updatedMessages
+        .filter((m) => m.id !== "msg_system")
+        .map((m) => ({ role: m.role, content: m.content }));
+
+      const response = await apiFetch("/api/gemini/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          messages: apiMessages,
+          systemInstruction
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("כשל בקבלת תגובה מהצ'אטבוט");
+      }
+
+      const data = await response.json();
+      const botMsg: ChatMessage = {
+        id: "msg_bot_" + Date.now(),
+        role: "assistant",
+        content: data.text,
+        timestamp: new Date().toLocaleTimeString("he-IL")
+      };
+
+      setChatMessages((prev) => [...prev, botMsg]);
+    } catch (err: any) {
+      alert("שגיאה בצ'אט: " + err.message);
+    } finally {
+      setIsChatSending(false);
+    }
+  };
+
+  // Test Connection to the specified API Key
+  const testApiKeyConnection = async () => {
+    if (!customGeminiKey.trim()) {
+      setTestConnectionStatus("error");
+      setTestConnectionMessage("נא להזין מפתח API של Gemini תחילה.");
+      return;
+    }
+
+    setTestConnectionStatus("testing");
+    setTestConnectionMessage("מתחבר ל-Gemini API...");
+
+    try {
+      // We will make a POST to /api/gemini/enhance with a small prompt to test
+      const response = await apiFetch("/api/gemini/enhance", {
+        method: "POST",
+        body: JSON.stringify({
+          promptText: "hi",
+          mode: "enhance"
+        })
+      });
+
+      if (response.ok) {
+        setTestConnectionStatus("success");
+        setTestConnectionMessage("החיבור הצליח! המפתח שלך תקין ועובד מצוין מול Gemini.");
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        setTestConnectionStatus("error");
+        setTestConnectionMessage(errData.error || "חיבור נכשל. ודא שהמפתח תקין ורשת האינטרנט מחוברת.");
+      }
+    } catch (err: any) {
+      setTestConnectionStatus("error");
+      setTestConnectionMessage("שגיאת רשת: " + err.message);
+    }
+  };
+
+  // Export database
+  const exportData = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(
+      JSON.stringify({ prompts, folders, darkMode })
+    );
+    const downloadAnchor = document.createElement("a");
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `PromptVault_Backup_${new Date().toISOString().slice(0,10)}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  // Import database
+  const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target?.result as string);
+        if (parsed.prompts && parsed.folders) {
+          setPrompts(parsed.prompts);
+          setFolders(parsed.folders);
+          if (parsed.darkMode !== undefined) setDarkMode(parsed.darkMode);
+          alert("הנתונים יובאו בהצלחה ומסנכרנים כעת!");
+        } else {
+          alert("קובץ גיבוי לא תקין.");
+        }
+      } catch (err) {
+        alert("שגיאה בקריאת קובץ הגיבוי.");
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  // Export single prompt
+  const exportSinglePrompt = (prompt: Prompt) => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(
+      JSON.stringify(prompt, null, 2)
+    );
+    const downloadAnchor = document.createElement("a");
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `Prompt_${prompt.title.replace(/[\s/\\:*?"<>|]+/g, "_")}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  // Import single prompt
+  const handleImportSinglePrompt = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target?.result as string);
+        if (parsed.title && parsed.content) {
+          const newPrompt: Prompt = {
+            id: "prompt_imported_" + Date.now(),
+            title: parsed.title,
+            content: parsed.content,
+            platform: parsed.platform || "General",
+            tags: Array.isArray(parsed.tags) ? parsed.tags : [],
+            folder: parsed.folder || folders[0]?.id || "work",
+            favorite: !!parsed.favorite,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            useCount: parsed.useCount || 0
+          };
+          setPrompts((prev) => [newPrompt, ...prev]);
+          alert(`הפרומפט "${newPrompt.title}" יובא בהצלחה!`);
+        } else {
+          alert("קובץ הפרומפט אינו תקין. ודא שהוא מכיל את השדות 'title' ו-'content'.");
+        }
+      } catch (err) {
+        alert("שגיאה בקריאת קובץ הפרומפט: ודא שהקובץ הוא בפורמט JSON תקין.");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ""; // Clear input selection
+  };
+
+  return (
+    <div className={`min-h-screen font-['Rubik','Plus_Jakarta_Sans',sans-serif] ${darkMode ? "dark bg-slate-950 text-slate-50" : "bg-slate-50 text-slate-900"} transition-colors duration-200`}>
+      {/* Top Banner Alert if API Key is missing */}
+      {!isApiKeyHealthy && (
+        <div className="text-white py-2 px-4 font-mono uppercase tracking-widest flex items-center justify-center gap-2 bg-blue-600 text-center border-slate-300 dark:bg-blue-500 dark:border-slate-600">
+          <Info className="w-3.5 h-3.5 shrink-0" />
+          <span>מפתח ה-API של Gemini אינו מוגדר. האפליקציה תפעל במצב אופליין בלבד. כדי להפעיל תכונות בינה מלאכותית, הגדר את ה-SECRET בהגדרות.</span>
+        </div>
+      )}
+
+      {/* Header Banner */}
+      <header className="sticky top-0 z-40 transition-colors duration-200 bg-white border-slate-200 dark:bg-slate-950 dark:border-slate-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-1.5 sm:gap-3">
+            <div className="w-10 h-10 flex items-center justify-center text-white font-bold italic font-sans tracking-tight border bg-blue-600 text-lg border-slate-200 dark:bg-blue-500 dark:text-white dark:border-slate-700">
+              V
+            </div>
+            <div>
+              <h1 className="font-sans tracking-tight font-extrabold leading-none text-slate-900 dark:text-white">
+                VAULT
+              </h1>
+              <p className="text-[10px] uppercase tracking-widest font-mono font-bold mt-1 text-slate-400 dark:text-slate-400">גרסה 2.4 — ניהול פרומפטים</p>
+            </div>
+          </div>
+
+          {/* Centered Tab Switcher */}
+          <nav className="hidden md:flex items-center gap-1 border p-1 rounded-2xl bg-slate-100 border-slate-200 dark:bg-slate-900 dark:border-slate-700">
+            <button
+              onClick={() => setActiveTab("library")}
+              className={`px-4 py-1.5 text-xs font-bold transition-all rounded-xl ${
+                activeTab === "library"
+                  ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              ספריית פרומפטים
+            </button>
+            <button
+              onClick={() => setActiveTab("guide")}
+              className={`px-4 py-1.5 text-xs font-bold transition-all rounded-xl flex items-center gap-1.5 ${
+                activeTab === "guide"
+                  ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              מדריך למשתמש
+            </button>
+            <button
+              onClick={() => setActiveTab("settings")}
+              className={`px-4 py-1.5 text-xs font-bold transition-all rounded-xl flex items-center gap-1.5 ${
+                activeTab === "settings"
+                  ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              <Settings className="w-3.5 h-3.5" />
+              הגדרות מתקדמות
+            </button>
+          </nav>
+
+          <div className="flex items-center gap-1.5 sm:gap-3">
+            {/* Quick backup button */}
+            <button onClick={exportData} title="גיבוי קובץ מקומי" className="hidden sm:flex p-2 hover:text-slate-900 hover:bg-slate-100 border transition-colors duration-150 text-slate-500 border-slate-200 dark:text-white dark:border-slate-700 dark:hover:bg-white/5 dark:hover:text-white"
+            >
+              <Save className="w-4 h-4" />
+            </button>
+
+            {/* Import Data */}
+            <label title="ייבוא גיבוי" className="hidden sm:flex p-2 hover:text-slate-900 hover:bg-slate-100 border transition-colors duration-150 cursor-pointer text-slate-500 border-slate-200 dark:text-white dark:border-slate-700 dark:hover:bg-white/5 dark:hover:text-white"
+            >
+              <Upload className="w-4 h-4" />
+              <input type="file" accept=".json" onChange={handleImportData} className="hidden" />
+            </label>
+
+            {/* Dark Mode toggle */}
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className="p-2 hover:text-slate-900 hover:bg-slate-100 border transition-colors duration-150 text-slate-500 border-slate-200 dark:text-white dark:border-slate-700 dark:hover:bg-white/5 dark:hover:text-white"
+            >
+              {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+
+            {/* New Prompt with AI Button */}
+            <button
+              onClick={() => setIsAiGeneratorOpen(true)}
+              className="hover:bg-blue-700 px-2 sm:px-4 py-1.5 sm:py-2 font-semibold uppercase tracking-wider transition-all duration-150 rounded-xl flex items-center gap-1.5 bg-blue-600 text-xs dark:bg-blue-500 dark:hover:bg-blue-400"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">צור עם AI</span>
+            </button>
+
+            {/* Standard New Button */}
+            <button
+              onClick={() => {
+                setEditingPrompt({
+                  title: "",
+                  content: "",
+                  platform: "General",
+                  tags: [],
+                  folder: folders[0]?.id || "work"
+                });
+                setIsEditModalOpen(true);
+              }}
+              className="border hover:bg-slate-100 px-2 sm:px-4 py-1.5 sm:py-2 font-semibold uppercase tracking-wider transition-all duration-150 flex items-center gap-1.5 rounded-xl text-xs border-slate-300 dark:text-white dark:border-slate-700 dark:hover:bg-slate-800"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">פרומפט חדש</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Container Dashboard */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Mobile-only tab switcher */}
+        <div className="flex md:hidden items-center justify-between gap-1 border p-1 mb-6 rounded-2xl overflow-x-auto no-scrollbar bg-slate-100 border-slate-200 dark:bg-slate-900 dark:border-slate-700">
+          <button
+            onClick={() => setActiveTab("library")}
+            className={`flex-1 py-2 px-3 text-xs font-bold text-center rounded-xl transition-all whitespace-nowrap ${
+              activeTab === "library"
+                ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+                : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+            }`}
+          >
+            ספרייה
+          </button>
+          <button
+            onClick={() => setActiveTab("guide")}
+            className={`flex-1 py-2 px-3 text-xs font-bold text-center rounded-xl transition-all whitespace-nowrap ${
+              activeTab === "guide"
+                ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+                : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+            }`}
+          >
+            מדריך
+          </button>
+          <button
+            onClick={() => setActiveTab("settings")}
+            className={`flex-1 py-2 px-3 text-xs font-bold text-center rounded-xl transition-all whitespace-nowrap ${
+              activeTab === "settings"
+                ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+                : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+            }`}
+          >
+            הגדרות
+          </button>
+        </div>
+
+        {activeTab === "library" && (
+          <>
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                <button
+                  onClick={() => {
+                    setIsCompareMode(!isCompareMode);
+                    setCompareSelection([]);
+                  }}
+                  className={`w-full sm:w-auto px-4 py-2 text-sm font-bold rounded-xl transition-all ${isCompareMode ? 'bg-amber-500 text-white shadow-lg' : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700'}`}
+                >
+                  {isCompareMode ? 'בטל מצב השוואה' : 'השוואת פרומפטים'}
+                </button>
+
+                <div className="lg:hidden w-full">
+                  <button
+                    onClick={() => setIsMobileFiltersOpen(!isMobileFiltersOpen)}
+                    className="w-full flex items-center justify-between p-3 rounded-xl font-bold transition-all bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Filter className="w-5 h-5" />
+                      <span>חיפוש, סינון וקטגוריות</span>
+                    </div>
+                    <span className="leading-none text-xl">{isMobileFiltersOpen ? '-' : '+'}</span>
+                  </button>
+                </div>
+            </div>
+            
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Sidebar Area */}
+          <aside className={`space-y-6 lg:col-span-1 ${isMobileFiltersOpen ? 'block' : 'hidden lg:block'}`}>
+            {/* Search and Filters card */}
+            <div className="border p-5 space-y-4 bg-slate-50 border-slate-200 dark:bg-slate-900 dark:border-slate-700">
+              <div className="relative">
+                <Search className="w-4 h-4 absolute end-3 top-3.5 text-slate-400 dark:text-slate-400" />
+                <input
+                  type="text"
+                  id="searchInput"
+                  placeholder="חיפוש חופשי..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full ps-3 pe-10 py-2.5 border rounded-2xl outline-none focus:border-slate-300 dark:focus:border-[#F5F5F0] transition-all placeholder-slate-400 dark:placeholder-slate-500 font-sans bg-white text-start border-slate-300 dark:bg-slate-950 dark:border-slate-700"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute start-3 top-3.5 hover:text-slate-900 text-slate-500 dark:text-slate-400 dark:hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* Favorites toggle */}
+              <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={showFavoritesOnly}
+                  onChange={(e) => setShowFavoritesOnly(e.target.checked)}
+                  className="focus:ring-0 w-4 h-4 accent-[#1A1A1A] dark:accent-[#F5F5F0] text-slate-900 dark:text-white"
+                />
+                <span className="font-medium flex items-center gap-1 text-slate-700 dark:text-slate-300">
+                  <Heart className={`w-3.5 h-3.5 ${showFavoritesOnly ? "fill-red-500 text-red-500" : "text-slate-400 dark:text-slate-500"}`} />
+                  רק מועדפים
+                </span>
+              </label>
+
+              {/* Sorting */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold tracking-widest uppercase flex items-center gap-1 font-mono text-slate-400 dark:text-slate-400">
+                  <Sliders className="w-3 h-3" />
+                  סדר מיון
+                </label>
+                <div className="grid grid-cols-3 gap-1 p-1 border rounded-xl bg-slate-100 border-slate-200 dark:bg-slate-900 dark:border-slate-700">
+                  <button
+                    onClick={() => setSortOrder("date")}
+                    className={`py-1.5 text-xs font-bold rounded-lg transition-all ${
+                      sortOrder === "date"
+                        ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+                        : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                    }`}
+                  >
+                    חדש
+                  </button>
+                  <button
+                    onClick={() => setSortOrder("usage")}
+                    className={`py-1.5 text-xs font-bold rounded-lg transition-all ${
+                      sortOrder === "usage"
+                        ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+                        : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                    }`}
+                  >
+                    שימוש
+                  </button>
+                  <button
+                    onClick={() => setSortOrder("alpha")}
+                    className={`py-1.5 text-xs font-bold rounded-lg transition-all ${
+                      sortOrder === "alpha"
+                        ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+                        : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                    }`}
+                  >
+                    א-ב
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Folders List */}
+            <div className="border p-5 space-y-3 bg-slate-50 border-slate-200 dark:bg-slate-900 dark:border-slate-700">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold tracking-widest uppercase font-mono text-slate-400 dark:text-slate-400">קטגוריות ותיקיות</span>
+                <button
+                  onClick={() => setIsNewFolderOpen(!isNewFolderOpen)}
+                  className="p-1 hover:bg-slate-100 hover:text-slate-900 text-slate-500 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white"
+                >
+                  <FolderPlus className="w-4 h-4" />
+                </button>
+              </div>
+
+              {isNewFolderOpen && (
+                <div className="flex gap-1.5 mt-2">
+                  <input
+                    type="text"
+                    placeholder="שם התיקייה..."
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    className="flex-1 px-2.5 py-1.5 border rounded-2xl outline-none placeholder-[#1A1A1A]/30 bg-white text-start border-slate-300 dark:bg-slate-950 dark:border-slate-600"
+                  />
+                  <button
+                    onClick={handleCreateFolder}
+                    className="hover:bg-[#333] px-3 py-1.5 rounded-2xl font-bold bg-blue-600 text-xs dark:bg-blue-500"
+                  >
+                    הוסף
+                  </button>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <button
+                  onClick={() => {
+                    setActiveFolder("all");
+                    setSelectedPrompt(null);
+                  }}
+                  className={`w-full text-start flex items-center justify-between px-3 py-2 text-sm transition-all border-b ${
+                    activeFolder === "all"
+                      ? "border-slate-300 dark:border-slate-700  font-bold text-slate-900 dark:text-white"
+                      : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white dark:hover:text-white"
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <FolderIcon className="w-3.5 h-3.5 shrink-0" />
+                    כל הפרומפטים
+                  </span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                    {prompts.length}
+                  </span>
+                </button>
+
+                {folders.map((f) => {
+                  const count = prompts.filter((p) => p.folder === f.id).length;
+                  return (
+                    <button
+                      key={f.id}
+                      onClick={() => {
+                        setActiveFolder(f.id);
+                        setSelectedPrompt(null);
+                      }}
+                      className={`w-full text-start flex items-center justify-between px-3 py-2 text-sm transition-all border-b ${
+                        activeFolder === f.id
+                          ? "border-slate-300 dark:border-slate-700  font-bold text-slate-900 dark:text-white"
+                          : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white dark:hover:text-white"
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <FolderIcon className="w-3.5 h-3.5 shrink-0" />
+                        {f.name}
+                      </span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Tags Cloud Filter */}
+            {allTags.length > 0 && (
+              <div className="border p-5 space-y-3 bg-slate-50 border-slate-200 dark:bg-slate-900 dark:border-slate-700">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold tracking-widest uppercase font-mono text-slate-400 dark:text-slate-400">תגיות וענן נושאים</span>
+                  {selectedTag && (
+                    <button
+                      onClick={() => setSelectedTag(null)}
+                      className="font-bold underline text-slate-900 dark:text-white"
+                    >
+                      נקה סינון
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-1.5">
+                  {allTags.map((tag) => (
+                    <button
+                      key={tag}
+                      onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
+                      className={`text-[11px] px-2.5 py-1 border transition-all ${
+                        selectedTag === tag
+                          ? "bg-blue-600 dark:bg-blue-500 text-white border-slate-300 dark:border-slate-700   font-bold"
+                          : "bg-white hover:bg-slate-100 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800"
+                      }`}
+                    >
+                      #{tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </aside>
+
+          {/* Prompts list + Details Display */}
+          <div className="col-span-1 lg:col-span-3 space-y-6">
+            
+            {/* Platforms Bar Header filter */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none border-slate-200 dark:border-slate-700">
+              <button
+                onClick={() => setActivePlatform("all")}
+                className={`px-2 sm:px-4 py-1.5 sm:py-2 text-xs font-bold tracking-wider uppercase transition-all shrink-0 rounded-2xl border ${
+                  activePlatform === "all"
+                    ? "bg-blue-600 dark:bg-blue-500 text-white  border-slate-300 dark:border-slate-700 "
+                    : "bg-transparent text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 dark:text-slate-400 dark:border-slate-700 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"
+                }`}
+              >
+                כל הפלטפורמות
+              </button>
+
+              {Object.values(PLATFORMS).map((pConfig) => (
+                <button
+                  key={pConfig.id}
+                  onClick={() => setActivePlatform(pConfig.id)}
+                  className={`px-2 sm:px-4 py-1.5 sm:py-2 text-xs font-bold tracking-wider uppercase transition-all shrink-0 flex items-center gap-1.5 rounded-2xl border ${
+                    activePlatform === pConfig.id
+                      ? "bg-blue-600 dark:bg-blue-500 text-white  border-slate-300 dark:border-slate-700 "
+                      : "bg-transparent text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 dark:text-slate-400 dark:border-slate-700 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  <span
+                    className="w-1.5 h-1.5 shrink-0"
+                    style={{ backgroundColor: pConfig.color }}
+                  />
+                  {pConfig.name}
+                </button>
+              ))}
+            </div>
+
+            {/* Split layout: Prompts on left, Detail on right (if selected) */}
+            <div className={`grid grid-cols-1 ${selectedPrompt ? "xl:grid-cols-2" : "grid-cols-1"} gap-6`}>
+              
+              {/* Prompts List Grid */}
+              <div className={`space-y-4 ${selectedPrompt ? "hidden xl:block" : "block"}`}>
+                {filteredPrompts.length === 0 ? (
+                  <div className="border p-12 space-y-4 rounded-2xl bg-white text-center border-slate-300 dark:bg-slate-900 dark:border-slate-700">
+                    <div className="w-12 h-12 border flex items-center justify-center mx-auto border-slate-200 dark:border-slate-700">
+                      <FolderIcon className="w-5 h-5 text-slate-900 dark:text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-sans tracking-tight font-bold text-lg">לא נמצאו פרומפטים</h3>
+                      <p className="mt-1 text-slate-500 dark:text-slate-400">לא נמצאו פרומפטים המתאימים למסננים שנבחרו.</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setActiveFolder("all");
+                        setActivePlatform("all");
+                        setSearchQuery("");
+                        setSelectedTag(null);
+                        setShowFavoritesOnly(false);
+                      }}
+                      className="font-bold py-1 uppercase tracking-widest text-slate-900 border-slate-300 dark:text-white dark:border-slate-700"
+                    >
+                      נקה את כל הסינונים
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-6">
+                    {filteredPrompts.map((p, index) => {
+                      const pf = PLATFORMS[p.platform] || PLATFORMS.General;
+                      const variables = extractVariables(p.content);
+                      const isSelected = selectedPrompt?.id === p.id;
+
+                      return (
+                        <div
+                          key={p.id}
+                          onClick={() => {
+                            if (isCompareMode) {
+                              if (compareSelection.some(sel => sel.id === p.id)) {
+                                setCompareSelection(compareSelection.filter(sel => sel.id !== p.id));
+                              } else if (compareSelection.length < 2) {
+                                setCompareSelection([...compareSelection, p]);
+                              }
+                              return;
+                            }
+                            setSelectedPrompt(p);
+                            if (window.innerWidth < 1280) {
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }
+                          }}
+                          className={`bg-white dark:bg-slate-900 p-6 cursor-pointer flex flex-col justify-between gap-4 select-none relative group transition-all duration-200 border-t-2 rounded-2xl ${
+                            isCompareMode && compareSelection.some(sel => sel.id === p.id)
+                              ? "border-amber-500 ring-2 ring-amber-500/50 shadow-lg"
+                              : isSelected
+                              ? "border border-slate-300 dark:border-slate-700 "
+                              : "border-slate-300 dark:border-slate-700 hover:border-slate-300 dark:border-slate-700/40"
+                          }`}
+                        >
+                          <div className="space-y-2">
+                            <div className="flex items-baseline gap-2 font-sans tracking-tight italic font-bold text-2xl dark:text-white/20">
+                              <span>0{index + 1}</span>
+                            </div>
+                            <div className="flex items-start justify-between">
+                              <h3 className="font-bold group-hover:underline transition-colors ps-8 line-clamp-1 text-slate-900 dark:text-white">
+                                {p.title}
+                              </h3>
+                              <button
+                                onClick={(e) => toggleFavorite(p.id, e)}
+                                className="absolute start-4 top-5 p-1 hover:text-red-500 text-slate-400 dark:text-slate-500 dark:hover:text-red-400"
+                              >
+                                <Heart className={`w-4 h-4 transition-colors ${p.favorite ? "fill-red-500 text-red-500" : "text-slate-400 dark:text-slate-500"}`} />
+                              </button>
+                            </div>
+
+                            <p className="line-clamp-2 leading-relaxed text-start dark:text-white/70">
+                              {p.content}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center justify-between flex-wrap gap-2 pt-3 text-xs border-slate-200 dark:border-slate-700">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[10px] font-bold tracking-widest uppercase border px-2 py-0.5 text-slate-900 border-slate-300 dark:text-white dark:border-slate-700/50">
+                                {pf.name}
+                              </span>
+                              {variables.length > 0 && (
+                                <span className="border px-2 py-0.5 text-[10px] font-semibold text-slate-500 border-slate-300 dark:text-slate-400 dark:border-slate-600">
+                                  {variables.length} משתנים
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2 text-[11px] font-mono text-slate-400 dark:text-slate-400">
+                              <span>{p.useCount} שימושים</span>
+                              <span>•</span>
+                              <span>
+                                {new Date(p.createdAt).toLocaleDateString("he-IL", {
+                                  day: "numeric",
+                                  month: "short"
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Selected Prompt Detail Screen */}
+              <AnimatePresence mode="wait">
+                {selectedPrompt && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    className="border p-6 space-y-6 flex flex-col justify-between sticky top-24 self-start rounded-2xl bg-white border-slate-300 dark:bg-slate-900 dark:border-slate-700 order-first xl:order-last"
+                  >
+                    
+                    {/* Mobile Back Button */}
+                    <button
+                      onClick={() => setSelectedPrompt(null)}
+                      className="xl:hidden flex items-center justify-start gap-1.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors pb-4 border-b border-slate-100 dark:border-slate-800 w-fit"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                      <span className="text-sm font-bold">חזור לרשימה</span>
+                    </button>
+                    
+                    {/* Header Details */}
+                    <div className="space-y-4">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] uppercase font-bold tracking-widest font-mono text-slate-400 dark:text-slate-400">פרומפט פעיל</span>
+                            <span className="text-[9px] font-bold tracking-widest uppercase border px-2 py-0.5 text-slate-900 border-slate-300 dark:text-white dark:border-slate-700/50">
+                              {PLATFORMS[selectedPrompt.platform]?.name || selectedPrompt.platform}
+                            </span>
+                          </div>
+                          <h2 className="font-sans tracking-tight font-extrabold text-slate-900 dark:text-white">{selectedPrompt.title}</h2>
+                        </div>
+
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={() => toggleFavorite(selectedPrompt.id)}
+                            title="סמן כמועדף"
+                            className="p-2 border hover:bg-slate-100 rounded-2xl text-slate-900 border-slate-300 dark:text-white/70 dark:border-slate-600 dark:hover:bg-white/5"
+                          >
+                            <Heart className={`w-4.5 h-4.5 ${selectedPrompt.favorite ? "fill-red-500 text-red-500" : ""}`} />
+                          </button>
+                          <button
+                            onClick={() => exportSinglePrompt(selectedPrompt)}
+                            title="ייצוא פרומפט זה כקובץ"
+                            className="p-2 border hover:bg-slate-100 rounded-2xl text-slate-900 border-slate-300 dark:text-white/70 dark:border-slate-600 dark:hover:bg-white/5"
+                          >
+                            <Download className="w-4.5 h-4.5" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingPrompt(selectedPrompt);
+                              setIsEditModalOpen(true);
+                            }}
+                            title="ערוך פרומפט"
+                            className="p-2 border hover:bg-slate-100 rounded-2xl text-slate-900 border-slate-300 dark:text-white/70 dark:border-slate-600 dark:hover:bg-white/5"
+                          >
+                            <Edit3 className="w-4.5 h-4.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeletePrompt(selectedPrompt.id)}
+                            title="מחק פרומפט"
+                            className="p-2 border hover:bg-red-50 rounded-2xl hover:text-red-500 text-slate-900 border-slate-300 dark:text-white/70 dark:border-slate-600 dark:hover:bg-red-950/20"
+                          >
+                            <Trash2 className="w-4.5 h-4.5" />
+                          </button>
+                          <button
+                            onClick={() => setSelectedPrompt(null)}
+                            title="סגור"
+                            className="p-2 border hover:bg-slate-100 rounded-2xl text-slate-900 border-slate-300 dark:text-white/70 dark:border-slate-600 dark:hover:bg-white/5"
+                          >
+                            <X className="w-4.5 h-4.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Display Template Text with variable highlight */}
+                      <div className="border p-4 leading-relaxed whitespace-pre-wrap select-text max-h-48 overflow-y-auto rounded-2xl font-sans bg-white text-slate-900 border-slate-200 dark:bg-slate-950 dark:text-white dark:border-slate-700">
+                        {getHighlightedPromptHTML()}
+                      </div>
+                    </div>
+
+                    {/* Variable Inputs Form (Interactive Fill & Copy) */}
+                    {activeVariables.length > 0 && (
+                      <div className="space-y-3.5 py-5 border-slate-200 dark:border-slate-700">
+                        <h4 className="text-[10px] font-bold tracking-widest uppercase font-mono text-slate-400 dark:text-slate-400">מילוי משתנים חכמים</h4>
+                        <div className="space-y-3">
+                          {activeVariables.map((vName) => (
+                            <div key={vName} className="space-y-1">
+                              <label className="font-semibold flex items-center justify-between text-slate-700 dark:text-slate-300">
+                                <span className="font-mono text-[11px]">$({vName})</span>
+                                {/* Microphone button for this variable */}
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    isRecording && activeRecordingField === vName
+                                      ? stopRecording()
+                                      : startRecording(vName)
+                                  }
+                                  className={`p-1 transition-all rounded-2xl ${
+                                    isRecording && activeRecordingField === vName
+                                      ? "bg-red-500 text-white animate-pulse"
+                                      : "hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:bg-white/5 text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                                  }`}
+                                  title="הקלט ודבר ישירות למשתנה"
+                                >
+                                  {isRecording && activeRecordingField === vName ? (
+                                    <MicOff className="w-3.5 h-3.5" />
+                                  ) : (
+                                    <Mic className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+                              </label>
+
+                              <input
+                                type="text"
+                                placeholder={`הזן ערך עבור ${vName}...`}
+                                value={variableValues[vName] || ""}
+                                onChange={(e) =>
+                                  setVariableValues((prev) => ({
+                                    ...prev,
+                                    [vName]: e.target.value
+                                  }))
+                                }
+                                className="w-full px-3 py-2 border rounded-2xl outline-none focus:border-slate-300 dark:focus:border-[#F5F5F0] transition-all bg-white text-start border-slate-300 dark:bg-slate-950 dark:border-slate-700"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Integrated AI Assistant Toolbar for Active View */}
+                    <div className="border p-4.5 space-y-3 bg-slate-50 border-slate-200 dark:bg-slate-900 dark:border-slate-700">
+                      <div className="flex items-center gap-1.5 font-bold font-sans tracking-tight italic text-slate-900 dark:text-white">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>כלים מתקדמים מבית Gemini</span>
+                      </div>
+
+                      <div className="flex gap-2 flex-wrap">
+                        {/* TTS Play Button */}
+                        <button
+                          onClick={isTtsPlaying ? stopAudio : playTts}
+                          className={`flex-1 py-2 px-3 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all rounded-2xl border ${
+                            isTtsPlaying
+                              ? "bg-red-500 text-white border-transparent"
+                              : "bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+                          }`}
+                        >
+                          {isTtsPlaying ? (
+                            <>
+                              <VolumeX className="w-4 h-4" />
+                              עצור הקראה
+                            </>
+                          ) : (
+                            <>
+                              <Volume2 className="w-4 h-4" />
+                              הקרא פרומפט (TTS)
+                            </>
+                          )}
+                        </button>
+
+                        {/* Test Playground Button */}
+                        <button
+                          onClick={startChatPlayground}
+                          className="flex-1 py-2 px-3 font-bold hover:bg-blue-700 flex items-center justify-center gap-1.5 transition-colors rounded-2xl bg-blue-600 text-white dark:bg-blue-500 dark:hover:bg-blue-400"
+                        >
+                          <Play className="w-4 h-4" />
+                          בחן פרומפט בסימולטור
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Action copy buttons */}
+                    <div className="flex gap-2 pt-4 border-slate-200 dark:border-slate-700">
+                      <button
+                        onClick={() => handleCopy(getResolvedPrompt(), selectedPrompt.id)}
+                        className="flex-1 py-2.5 hover:bg-[#333] rounded-2xl font-semibold flex items-center justify-center gap-2 transition-all bg-blue-600 text-sm dark:bg-blue-500 dark:text-white dark:hover:bg-[#E5E5E0]"
+                      >
+                        {copiedId === selectedPrompt.id ? (
+                          <>
+                            <Check className="w-4 h-4 text-emerald-400" />
+                            <span>הועתק בהצלחה!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-4 h-4" />
+                            <span>העתק פרומפט מוכן</span>
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        onClick={() => handleCopy(selectedPrompt.content, selectedPrompt.id)}
+                        className="py-2.5 px-3.5 border hover:bg-slate-100 rounded-2xl font-medium transition-all text-sm border-slate-300 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-white/5"
+                        title="העתק את התבנית המקורית עם משתנים"
+                      >
+                        העתק תבנית
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+            </div>
+          </div>
+        </div>
+          </>
+      )}
+
+        {/* Tab 2: User Guide (מדריך למשתמש) */}
+        {activeTab === "guide" && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-8 max-w-4xl mx-auto"
+          >
+            <div className="border p-8 bg-white text-start border-slate-200 dark:bg-slate-900 dark:border-slate-700">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-slate-200 dark:border-slate-700">
+                <BookOpen className="w-8 h-8 text-slate-900 dark:text-white" />
+                <div>
+                  <h2 className="font-sans tracking-tight font-extrabold text-slate-900 dark:text-white">מדריך למשתמש - PromptVault OS</h2>
+                  <p className="mt-0.5 text-slate-500 dark:text-slate-400">כל מה שצריך לדעת כדי לשלוט בכלי ניהול והשחזת הפרומפטים החכם</p>
+                </div>
+              </div>
+
+              <div className="space-y-6 leading-relaxed text-sm dark:text-slate-300">
+                <section className="space-y-2">
+                  <h3 className="font-sans tracking-tight font-bold text-slate-900 dark:text-white">1. יצירה וניהול של תבניות פרומפטים</h3>
+                  <p>
+                    בלשונית <strong>ספריית פרומפטים</strong>, תוכלו ליצור, לערוך ולשמור תבניות מותאמות אישית. לכל פרומפט ניתן לשייך כותרת, תגיות, פלטפורמה מיועדת (לדוגמה: ChatGPT, Midjourney, Claude) ותיקיית קטגוריה (כגון קוד, עבודה, יצירתי, או אישי).
+                  </p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="font-sans tracking-tight font-bold text-slate-900 dark:text-white">2. שימוש במשתנים דינמיים <code>$(VARIABLE_NAME)</code></h3>
+                  <p>
+                    תכונה זו מאפשרת לכם ליצור פרומפטים גנריים ושימושיים. פשוט הכניסו בגוף הפרומפט משתנים בצורה הבאה: <code>$(שם_המשתנה)</code>. 
+                    כאשר תבחרו בפרומפט זה מהספרייה, המערכת תזהה אותם אוטומטית ותפתח שדות קלט דינמיים להזנת ערכים בזמן אמת.
+                  </p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="font-sans tracking-tight font-bold text-slate-900 dark:text-white">3. שדרוג פרומפטים עם בינה מלאכותית (AI)</h3>
+                  <p>
+                    המערכת מגיעה עם מנגנון השחזה מובנה מבית Gemini. בלחיצה על <strong>"שפר ושדרג פרומפט (AI)"</strong>, המערכת תבצע ניתוח הנדסת פרומפטים ותייצר גרסה משופרת, מורחבת ומדויקת יותר, תוך שמירה על המשתנים הדינמיים שהגדרתם.
+                  </p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="font-sans tracking-tight font-bold text-slate-900 dark:text-white">4. הקלדה קולית והקראה קולית חכמה (Speech Toolkit)</h3>
+                  <ul className="list-disc list-inside space-y-1.5 me-4">
+                    <li><strong>הקלדה קולית (STT):</strong> ליד כל שדה קלט דינמי ובגוף הפרומפט הראשי מופיע כפתור מיקרופון. לחצו עליו ודברו חופשי כדי לתמלל את דבריכם באופן מדויק ישירות לתוך השדות.</li>
+                    <li><strong>הקראה קולית (TTS):</strong> רוצים לשמוע כיצד הפרומפט נשמע? לחצו על "הקרא פרומפט" ותהנו מהקראה קולית אינטראקטיבית ואיכותית של הפרומפט המוכן.</li>
+                  </ul>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="font-sans tracking-tight font-bold text-slate-900 dark:text-white">5. ניתוח תמונות וויזואלי (Vision Key & Image Analyzer)</h3>
+                  <p>
+                    רוצים לכתוב פרומפט על בסיס תמונה? השתמשו בבונה הפרומפטים החכם, העלו תמונה, וה-AI ינתח אותה כדי לבנות עבורכם תבנית פרומפט מקצועית המבוססת על הרכיבים החזותיים שזוהו בה.
+                  </p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="font-sans tracking-tight font-bold text-slate-900 dark:text-white">6. סימולטור וסימולציית צ'אט אינטראקטיבית</h3>
+                  <p>
+                    במקום להעתיק את הפרומפט לפלטפורמה חיצונית כדי לבדוק אותו, לחצו על <strong>"בחן פרומפט בסימולטור"</strong>. ייפתח מולכם חלון צ'אט חי ואינטראקטיבי המדמה את התנהגות מודל השפה הגדול יחד עם הפרומפט שכתבתם, כולל הנחיות המערכת והמשתנים שהזנתם.
+                  </p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="font-sans tracking-tight font-bold text-slate-900 dark:text-white">7. ניידות נתונים, גיבוי וייצוא/ייבוא של פרומפטים בודדים</h3>
+                  <p>
+                    המערכת תומכת בייצוא של כל מסד הנתונים שלכם בקובץ גיבוי אחד מלא. בנוסף, הוספנו אפשרות <strong>לייצא ולייבא פרומפטים בודדים</strong>. כפתור ההורדה ליד כל פרומפט יוריד קובץ JSON ייחודי של אותו פרומפט, אותו תוכלו לשלוח לחברים או לייבא בחזרה למערכת בקלות.
+                  </p>
+                </section>
+              </div>
+
+              <div className="mt-8 pt-6 flex justify-between items-center flex-wrap gap-4 border-slate-200 dark:border-slate-700">
+                <span className="text-slate-400 dark:text-slate-400">פותח באהבה עבור מהנדסי פרומפטים מתקדמים</span>
+                <button
+                  onClick={() => setActiveTab("library")}
+                  className="px-6 py-2 font-bold transition-all rounded-2xl hover:opacity-90 bg-blue-600 text-xs dark:bg-blue-500"
+                >
+                  חזרה לספריית הפרומפטים ←
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Tab 3: Advanced Settings (הגדרות מתקדמות) */}
+        {activeTab === "settings" && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-8 max-w-4xl mx-auto text-start"
+          >
+            {/* API Keys Panel */}
+            <div className="border p-8 bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-700">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-slate-200 dark:border-slate-700">
+                <Settings className="w-8 h-8 text-slate-900 dark:text-white" />
+                <div>
+                  <h2 className="font-sans tracking-tight font-extrabold text-slate-900 dark:text-white">הגדרות מתקדמות וספקי מפתחות API</h2>
+                  <p className="mt-0.5 text-slate-500 dark:text-slate-400">נהלו מפתחות API של מגוון ספקים, בצעו בדיקת חיבור והתאימו את preferences האפליקציה</p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                {/* Method selector toggle */}
+                <div className="p-4 border space-y-3 bg-white border-slate-200 dark:bg-slate-950 dark:border-slate-700">
+                  <div className="flex items-center justify-between flex-row-reverse">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={useCustomKeys}
+                        onChange={(e) => {
+                          const val = e.target.checked;
+                          setUseCustomKeys(val);
+                          localStorage.setItem("promptvault_use_custom_keys", String(val));
+                        }}
+                        className="w-4 h-4 accent-[#1A1A1A] dark:accent-[#F5F5F0]"
+                      />
+                      <span className="font-bold text-slate-900 dark:text-white">השתמש במפתחות API אישיים משלי</span>
+                    </label>
+                    <span className="font-mono text-slate-400 dark:text-slate-400">
+                      {useCustomKeys ? "מצב מפתח מותאם אישית פעיל" : "מצב מכסה ציבורית משותפת פעיל"}
+                    </span>
+                  </div>
+                  <p className="leading-relaxed text-slate-900 dark:text-white/70">
+                    כאשר אפשרות זו פעילה, כל הפעולות החכמות (שדרוג פרומפט, ניתוח תמונות, סימולטור, הקראה ותמלול) ישתמשו במפתח ה-Gemini האישי שהזנתם למטה במקום להסתמך על מכסת השרת הכללית. זהו פתרון מצוין למניעת מגבלות קצב ומכסות (Rate Limits / Quotas).
+                  </p>
+                </div>
+
+                {/* Grid of Keys */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Google Gemini Key */}
+                  <div className="space-y-1.5">
+                    <label className="font-bold text-slate-700 dark:text-slate-300">Google Gemini API Key</label>
+                    <input
+                      type="password"
+                      placeholder="הזן מפתח API של Google Gemini..."
+                      value={customGeminiKey}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCustomGeminiKey(val);
+                        localStorage.setItem("promptvault_custom_gemini_key", val);
+                      }}
+                      className="w-full px-2 sm:px-4 py-1.5 sm:py-2 border rounded-2xl outline-none focus:border-slate-300 dark:focus:border-[#F5F5F0] transition-all font-mono bg-white text-end border-slate-300 dark:bg-slate-950 dark:border-slate-700"
+                    />
+                    <p className="text-[10px] text-slate-400 dark:text-slate-400">מפתח זה משמש לשירותי הליבה, תמלול דיבור, והקראה קולית באפליקציה.</p>
+                  </div>
+
+                  {/* OpenAI API Key */}
+                  <div className="space-y-1.5">
+                    <label className="font-bold text-slate-700 dark:text-slate-300">OpenAI API Key (אופציונלי)</label>
+                    <input
+                      type="password"
+                      placeholder="הזן מפתח API של OpenAI..."
+                      value={customOpenaiKey}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCustomOpenaiKey(val);
+                        localStorage.setItem("promptvault_custom_openai_key", val);
+                      }}
+                      className="w-full px-2 sm:px-4 py-1.5 sm:py-2 border rounded-2xl outline-none focus:border-slate-300 dark:focus:border-[#F5F5F0] transition-all font-mono bg-white text-end border-slate-300 dark:bg-slate-950 dark:border-slate-700"
+                    />
+                    <p className="text-[10px] text-slate-400 dark:text-slate-400">לשימוש בעתיד עבור קישור וחיבור מודלים של OpenAI לסימולטור.</p>
+                  </div>
+
+                  {/* Anthropic Claude Key */}
+                  <div className="space-y-1.5">
+                    <label className="font-bold text-slate-700 dark:text-slate-300">Anthropic Claude Key (אופציונלי)</label>
+                    <input
+                      type="password"
+                      placeholder="הזן מפתח API של Anthropic Claude..."
+                      value={customClaudeKey}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCustomClaudeKey(val);
+                        localStorage.setItem("promptvault_custom_claude_key", val);
+                      }}
+                      className="w-full px-2 sm:px-4 py-1.5 sm:py-2 border rounded-2xl outline-none focus:border-slate-300 dark:focus:border-[#F5F5F0] transition-all font-mono bg-white text-end border-slate-300 dark:bg-slate-950 dark:border-slate-700"
+                    />
+                  </div>
+
+                  {/* Cohere API Key */}
+                  <div className="space-y-1.5">
+                    <label className="font-bold text-slate-700 dark:text-slate-300">Cohere API Key (אופציונלי)</label>
+                    <input
+                      type="password"
+                      placeholder="הזן מפתח API של Cohere..."
+                      value={customCohereKey}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCustomCohereKey(val);
+                        localStorage.setItem("promptvault_custom_cohere_key", val);
+                      }}
+                      className="w-full px-2 sm:px-4 py-1.5 sm:py-2 border rounded-2xl outline-none focus:border-slate-300 dark:focus:border-[#F5F5F0] transition-all font-mono bg-white text-end border-slate-300 dark:bg-slate-950 dark:border-slate-700"
+                    />
+                  </div>
+                </div>
+
+                {/* Connection Testing Button */}
+                <div className="p-5 border space-y-3 bg-slate-100 border-slate-200 dark:bg-slate-800 dark:border-slate-700">
+                  <div className="flex items-center justify-between flex-wrap gap-4">
+                    <button
+                      type="button"
+                      onClick={testApiKeyConnection}
+                      disabled={testConnectionStatus === "testing"}
+                      className="px-5 py-2.5 font-bold rounded-2xl hover:opacity-90 transition-all disabled:opacity-50 bg-blue-600 text-xs dark:bg-blue-500"
+                    >
+                      {testConnectionStatus === "testing" ? "בודק חיבור..." : "בדוק חיבור ל-Gemini API"}
+                    </button>
+                    <span className="font-bold text-slate-500 dark:text-slate-400">בדיקת אינטגרציה חיה של המפתח שלכם מול שרתי Google</span>
+                  </div>
+
+                  {testConnectionStatus !== "idle" && (
+                    <div className={`p-3.5 border text-xs font-medium ${
+                      testConnectionStatus === "success"
+                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                        : testConnectionStatus === "testing"
+                        ? "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400"
+                        : "bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400"
+                    }`}>
+                      {testConnectionMessage}
+                    </div>
+                  )}
+                </div>
+
+                {/* Preferences Selection */}
+                <div className="space-y-4 pt-4 border-slate-200 dark:border-slate-700">
+                  <h3 className="font-sans tracking-tight font-bold text-slate-900 dark:text-white">העדפות כלליות של המערכת</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* TTS Voice Picker */}
+                    <div className="space-y-1.5">
+                      <label className="font-bold text-slate-700 dark:text-slate-300">בחירת מודל קול עבור הקראה (TTS)</label>
+                      <select
+                        value={ttsVoice}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setTtsVoice(val);
+                          localStorage.setItem("promptvault_tts_voice", val);
+                        }}
+                        className="w-full px-2 sm:px-4 py-1.5 sm:py-2.5 border rounded-2xl outline-none focus:border-slate-300 dark:focus:border-[#F5F5F0] transition-all bg-white text-sm border-slate-300 dark:bg-slate-950 dark:border-slate-700"
+                      >
+                        <option value="Kore">Kore (קול חם וברור)</option>
+                        <option value="Aoede">Aoede (קול נשי רהוט)</option>
+                        <option value="Puck">Puck (קול דינמי ומלא הבעה)</option>
+                        <option value="Fenrir">Fenrir (קול עמוק וסמכותי)</option>
+                        <option value="Charon">Charon (קול רשמי וקרייני)</option>
+                      </select>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-400">בחר את גוון הקול של המקריא החכם של Gemini.</p>
+                    </div>
+
+                    {/* Quick reset database */}
+                    <div className="space-y-1.5 flex flex-col justify-end">
+                      <label className="font-bold text-slate-700 dark:text-slate-300">אזור סכנה - איפוס נתונים</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm("האם אתה בטוח שברצונך לאפס את כל הפרומפטים השמורים ולחזור להגדרות היצרן? פעולה זו אינה הפיכה!")) {
+                            localStorage.removeItem("promptvault_prompts");
+                            localStorage.removeItem("promptvault_folders");
+                            window.location.reload();
+                          }
+                        }}
+                        className="w-full px-2 sm:px-4 py-1.5 sm:py-2.5 border hover:bg-red-500 hover:text-white font-bold rounded-2xl transition-all duration-200 text-xs border-red-500/30"
+                      >
+                        איפוס מוחלט של האפליקציה לשחזור הגדרות ברירת מחדל
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Import / Export DB Backups inside settings too */}
+                <div className="pt-6 flex justify-between items-center flex-wrap gap-4 border-slate-200 dark:border-slate-700">
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      onClick={exportData}
+                      title="ייצוא כל הנתונים השמורים כקובץ גיבוי אחד"
+                      className="px-2 sm:px-4 py-1.5 sm:py-2 border hover:bg-slate-100 font-bold rounded-2xl text-slate-900 border-slate-300 dark:text-white dark:border-slate-600 dark:hover:bg-slate-800"
+                    >
+                      ייצוא גיבוי מלא (.json)
+                    </button>
+                    <label
+                      title="טען קובץ גיבוי של כל המאגר שלך"
+                      className="px-2 sm:px-4 py-1.5 sm:py-2 border hover:bg-slate-100 font-bold rounded-2xl cursor-pointer inline-block text-slate-900 border-slate-300 dark:text-white dark:border-slate-600 dark:hover:bg-slate-800"
+                    >
+                      <span>ייבוא גיבוי מלא</span>
+                      <input
+                        type="file"
+                        accept=".json"
+                        onChange={handleImportData}
+                        className="hidden"
+                      />
+                    </label>
+                    <label
+                      title="ייבוא פרומפט בודד מקובץ JSON שחבר שיתף איתך"
+                      className="px-2 sm:px-4 py-1.5 sm:py-2 border hover:bg-slate-100 font-bold rounded-2xl flex items-center gap-1.5 cursor-pointer inline-block text-slate-900 border-slate-300 dark:text-white dark:border-slate-600 dark:hover:bg-slate-800"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>ייבוא פרומפט בודד (.json)</span>
+                      <input
+                        type="file"
+                        accept=".json"
+                        onChange={handleImportSinglePrompt}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                  <span className="text-slate-400 dark:text-slate-400">כל המפתחות וההגדרות נשמרים בדפדפן המקומי שלך בצורה מאובטחת.</span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </main>
+
+      {/* MODAL 1: Create or Edit Prompt Form */}
+      <AnimatePresence>
+        {isEditModalOpen && editingPrompt && (
+          <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center p-4 z-50 bg-slate-900/50 dark:bg-black/80">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="border max-w-2xl w-full p-6 relative overflow-hidden rounded-2xl bg-white text-start border-slate-300 dark:bg-slate-900 dark:border-slate-700"
+            >
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="font-sans tracking-tight font-extrabold text-slate-900 dark:text-white">
+                  {editingPrompt.id ? "עריכת פרומפט" : "יצירת פרומפט חדש"}
+                </h3>
+                <button
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="p-1 hover:bg-slate-100 hover:text-slate-900 text-slate-400 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSavePrompt} className="space-y-4">
+                {/* Title */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-widest font-mono text-slate-400 dark:text-slate-400">כותרת הפרומפט</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="לדוגמה: ניתוח קוד מקור מומחה..."
+                    value={editingPrompt.title || ""}
+                    onChange={(e) => setEditingPrompt((prev) => ({ ...prev, title: e.target.value }))}
+                    className="w-full px-2 sm:px-4 py-1.5 sm:py-2.5 border rounded-2xl outline-none focus:border-slate-300 dark:focus:border-[#F5F5F0] transition-all bg-white text-start border-slate-300 dark:bg-slate-950 dark:border-slate-700"
+                  />
+                </div>
+
+                {/* Prompt Template content */}
+                <div className="space-y-1 relative">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[10px] font-bold uppercase tracking-widest font-mono text-slate-400 dark:text-slate-400">
+                      גוף הפרומפט (השתמש ב-$(NAME) להגדרת משתנים דינמיים)
+                    </label>
+
+                    <div className="flex gap-2">
+                      {/* Audio mic recorder */}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          isRecording && activeRecordingField === "promptBuilderContent"
+                            ? stopRecording()
+                            : startRecording("promptBuilderContent")
+                        }
+                        className={`text-[11px] px-2.5 py-1 transition-all flex items-center gap-1 rounded-2xl border ${
+                          isRecording && activeRecordingField === "promptBuilderContent"
+                            ? "bg-red-500 text-white border-transparent animate-pulse"
+                            : "bg-white text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800 border-slate-300 dark:border-slate-600 dark:bg-slate-950 dark:text-white dark:border-slate-600 dark:border-slate-700"
+                        }`}
+                      >
+                        {isRecording && activeRecordingField === "promptBuilderContent" ? (
+                          <>
+                            <MicOff className="w-3.5 h-3.5" />
+                            <span>עצור הקלטה</span>
+                          </>
+                        ) : (
+                          <>
+                            <Mic className="w-3.5 h-3.5" />
+                            <span>דבר לפרומפט</span>
+                          </>
+                        )}
+                      </button>
+
+                      {/* Gemini Enhancer Button */}
+                      <button
+                        type="button"
+                        onClick={enhanceActivePromptTemplate}
+                        disabled={aiGenerating || !editingPrompt.content}
+                        className="border hover:bg-slate-100 text-[11px] px-2.5 py-1 rounded-xl flex items-center gap-1 transition-all disabled:opacity-50 text-slate-900 border-slate-300 dark:text-white dark:border-slate-700 dark:hover:bg-slate-800"
+                      >
+                        {aiGenerating ? (
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Sparkles className="w-3.5 h-3.5" />
+                        )}
+                        <span>שפר פרומפט עם Gemini</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <textarea
+                    required
+                    rows={6}
+                    placeholder="כתוב את הפרומפט שלך כאן. לדוגמה: אנא כתוב פוסט בנושא $(TOPIC) בשפת $(LANGUAGE)..."
+                    value={editingPrompt.content || ""}
+                    onChange={(e) => setEditingPrompt((prev) => ({ ...prev, content: e.target.value }))}
+                    className="w-full px-4 py-3 border rounded-2xl outline-none focus:border-slate-300 dark:focus:border-[#F5F5F0] transition-all font-mono bg-white text-start border-slate-300 dark:bg-slate-950 dark:border-slate-700"
+                  />
+                </div>
+
+                {/* Grid for folder and platform */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-widest font-mono text-slate-400 dark:text-slate-400">תיקייה</label>
+                    <select
+                      value={editingPrompt.folder || "work"}
+                      onChange={(e) => setEditingPrompt((prev) => ({ ...prev, folder: e.target.value }))}
+                      className="w-full px-3 py-2.5 border rounded-2xl outline-none focus:border-slate-300 dark:focus:border-[#F5F5F0] transition-all bg-white text-start border-slate-300 dark:bg-slate-950 dark:border-slate-700"
+                    >
+                      {folders.map((f) => (
+                        <option key={f.id} value={f.id}>
+                          {f.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-widest font-mono text-slate-400 dark:text-slate-400">פלטפורמת AI תואמת</label>
+                    <select
+                      value={editingPrompt.platform || "General"}
+                      onChange={(e) => setEditingPrompt((prev) => ({ ...prev, platform: e.target.value }))}
+                      className="w-full px-3 py-2.5 border rounded-2xl outline-none focus:border-slate-300 dark:focus:border-[#F5F5F0] transition-all bg-white text-start border-slate-300 dark:bg-slate-950 dark:border-slate-700"
+                    >
+                      {Object.keys(PLATFORMS).map((p) => (
+                        <option key={p} value={p}>
+                          {p === "General" ? "כללי" : p}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Tags manager */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest font-mono text-slate-400 dark:text-slate-400">
+                    תגיות (מופרדות בפסיק)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="לדוגמה: פיתוח, פרודוקטיביות, שיווק"
+                    value={editingPrompt.tags?.join(", ") || ""}
+                    onChange={(e) =>
+                      setEditingPrompt((prev) => ({
+                        ...prev,
+                        tags: e.target.value.split(",").map((t) => t.trim()).filter(Boolean)
+                      }))
+                    }
+                    className="w-full px-2 sm:px-4 py-1.5 sm:py-2.5 border rounded-2xl outline-none focus:border-slate-300 dark:focus:border-[#F5F5F0] transition-all bg-white text-start border-slate-300 dark:bg-slate-950 dark:border-slate-700"
+                  />
+                  
+                  
+                  {suggestedTags.length > 0 && (
+                    <div className="space-y-1 mb-3">
+                      <span className="text-[10px] block text-slate-400 dark:text-slate-500">הצעות תגיות חכמות:</span>
+                      <div className="flex flex-wrap gap-1.5 p-1.5 border rounded-xl bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-900/50">
+                        {suggestedTags.map((tag) => (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => {
+                              const currentTags = editingPrompt.tags || [];
+                              setEditingPrompt({ ...editingPrompt, tags: [...currentTags, tag] });
+                            }}
+                            className="px-2 py-1 rounded-xl font-bold transition-all hover:bg-amber-200 bg-amber-100 text-amber-700 dark:bg-amber-800/50 dark:text-amber-300"
+                          >
+                            + {tag}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Interactive existing tags recommender */}
+                  {allTags.length > 0 && (
+                    <div className="space-y-1">
+                      <span className="text-[10px] block text-slate-400 dark:text-slate-400">בחר מתגיות קיימות להוספה מהירה:</span>
+                      <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1.5 border bg-slate-100 border-slate-300 dark:bg-slate-800 dark:border-white/5">
+                        {allTags.map((tag) => {
+                          const isSelected = editingPrompt.tags?.includes(tag);
+                          return (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={() => {
+                                const currentTags = editingPrompt.tags || [];
+                                let nextTags;
+                                if (currentTags.includes(tag)) {
+                                  nextTags = currentTags.filter((t) => t !== tag);
+                                } else {
+                                  nextTags = [...currentTags, tag];
+                                }
+                                setEditingPrompt((prev) => ({ ...prev, tags: nextTags }));
+                              }}
+                              className={`text-[10px] px-2 py-0.5 border rounded-2xl transition-all ${
+                                isSelected
+                                  ? "bg-blue-600 dark:bg-blue-500 text-white border-transparent "
+                                  : "bg-white text-slate-900 dark:text-white/70 border-slate-200 dark:border-slate-700 dark:bg-slate-950 dark:text-white/70 dark:border-slate-700 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-white/5"
+                              }`}
+                            >
+                              {isSelected ? "✓ " : ""}{tag}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Save Buttons */}
+                <div className="flex gap-2.5 pt-4 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditModalOpen(false)}
+                    className="px-5 py-2 border hover:bg-slate-100 rounded-2xl font-bold uppercase tracking-wider text-slate-900 border-slate-300 dark:text-white/70 dark:border-slate-600 dark:hover:bg-white/5"
+                  >
+                    ביטול
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2 hover:bg-blue-700 rounded-2xl font-bold uppercase tracking-wider bg-blue-600 text-xs dark:bg-blue-500 dark:hover:bg-blue-400"
+                  >
+                    שמור שינויים
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL 2: AI Prompt Generator & Vision analyzer */}
+      <AnimatePresence>
+        {isAiGeneratorOpen && (
+          <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center p-4 z-50 bg-slate-900/50 dark:bg-black/80">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="border max-w-xl w-full p-6 relative overflow-hidden rounded-2xl bg-white text-start border-slate-300 dark:bg-slate-900 dark:border-slate-700"
+            >
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="font-sans tracking-tight font-extrabold flex items-center gap-2 text-slate-900 dark:text-white">
+                  <Sparkles className="w-5 h-5" />
+                  מחולל פרומפטים מבוסס AI
+                </h3>
+                <button
+                  onClick={() => {
+                    setIsAiGeneratorOpen(false);
+                    setVisionImage(null);
+                    setAiDescription("");
+                  }}
+                  className="p-1 hover:bg-slate-100 hover:text-slate-900 text-slate-400 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-5">
+                {/* Visual Vision drag drop or select */}
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold uppercase tracking-widest font-mono text-slate-400 dark:text-slate-400">אפשרות א': הפק פרומפט מתמונה (Vision)</span>
+                  <div className="border p-6 hover:bg-slate-100 transition-all flex flex-col items-center justify-center gap-2 cursor-pointer relative rounded-2xl bg-white border-slate-300 dark:bg-slate-950 dark:border-slate-600 dark:hover:bg-white/5">
+                    {visionImage ? (
+                      <div className="space-y-2 text-center">
+                        <img
+                          src={`data:${visionMimeType};base64,${visionImage}`}
+                          alt="Uploaded Preview"
+                          className="max-h-24 object-contain mx-auto border border-slate-200 dark:border-slate-700"
+                        />
+                        <button
+                          onClick={() => setVisionImage(null)}
+                          className="hover:underline font-bold text-red-500"
+                        >
+                          הסר תמונה
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <ImageIcon className="w-8 h-8 text-slate-400 dark:text-slate-400" />
+                        <span className="text-slate-500 dark:text-slate-400">לחץ להעלאת תמונה (סקיצה, מסמך או השראה)</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                        />
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4 font-bold text-slate-900 dark:text-white/30">
+                  <div className="flex-1 h-[1px] bg-blue-600 dark:bg-blue-600/10" />
+                  <span>או</span>
+                  <div className="flex-1 h-[1px] bg-blue-600 dark:bg-blue-600/10" />
+                </div>
+
+                {/* Option B: Text description */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-bold uppercase tracking-widest font-mono text-slate-400 dark:text-slate-400">אפשרות ב': תאר מה הפרומפט שאתה צריך</span>
+                    {/* Dictate description */}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        isRecording && activeRecordingField === "aiDescription"
+                          ? stopRecording()
+                          : startRecording("aiDescription")
+                      }
+                      className={`text-[11px] px-2.5 py-1 transition-all flex items-center gap-1 rounded-2xl border ${
+                        isRecording && activeRecordingField === "aiDescription"
+                          ? "bg-red-500 text-white border-transparent animate-pulse"
+                          : "bg-white text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800 border-slate-300 dark:border-slate-600 dark:bg-slate-950 dark:text-white dark:border-slate-600 dark:border-slate-700"
+                      }`}
+                    >
+                      {isRecording && activeRecordingField === "aiDescription" ? (
+                        <>
+                          <MicOff className="w-3 h-3" />
+                          <span>עצור הקלטה</span>
+                        </>
+                      ) : (
+                        <>
+                          <Mic className="w-3 h-3" />
+                          <span>דבר לכתיבה</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  <textarea
+                    rows={4}
+                    disabled={!!visionImage}
+                    placeholder="לדוגמה: פרומפט ליועץ תזונה אישי שיעזור לי לבנות תוכנית אימונים שבועית לפי רמת הכושר שלי..."
+                    value={aiDescription}
+                    onChange={(e) => setAiDescription(e.target.value)}
+                    className="w-full px-4 py-3 border rounded-2xl outline-none focus:border-slate-300 dark:focus:border-[#F5F5F0] transition-all disabled:opacity-40 bg-white text-start border-slate-300 dark:bg-slate-950 dark:border-slate-700"
+                  />
+                </div>
+
+                {/* Generate Button */}
+                <div className="flex gap-2.5 pt-3 justify-end">
+                  <button
+                    onClick={() => {
+                      setIsAiGeneratorOpen(false);
+                      setVisionImage(null);
+                      setAiDescription("");
+                    }}
+                    className="px-5 py-2 border hover:bg-slate-100 rounded-2xl font-bold uppercase tracking-wider text-slate-900 border-slate-300 dark:text-white/70 dark:border-slate-600 dark:hover:bg-white/5"
+                  >
+                    ביטול
+                  </button>
+                  <button
+                    onClick={generatePromptFromAi}
+                    disabled={aiGenerating || (!aiDescription.trim() && !visionImage)}
+                    className="px-6 py-2 hover:bg-blue-700 disabled:opacity-50 rounded-2xl font-bold uppercase tracking-wider flex items-center gap-1.5 bg-blue-600 text-xs dark:bg-blue-500 dark:hover:bg-blue-400"
+                  >
+                    {aiGenerating ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>מייצר פרומפט מומחה...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        <span>חולל פרומפט</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL 3: Interactive Playground / Testing simulator */}
+      <AnimatePresence>
+        {isChatPlaygroundOpen && (
+          <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center p-4 z-50 bg-slate-900/50 dark:bg-black/80">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="border max-w-2xl w-full h-[80vh] flex flex-col justify-between relative overflow-hidden rounded-2xl bg-white text-start border-slate-300 dark:bg-slate-900 dark:border-slate-700"
+            >
+              {/* Chat Title bar */}
+              <div className="p-5 flex items-center justify-between bg-slate-50 border-slate-200 dark:bg-slate-900 dark:border-slate-700">
+                <div className="flex items-center gap-1.5 sm:gap-3">
+                  <div className="w-9 h-9 border flex items-center justify-center bg-white border-slate-300 dark:bg-slate-950 dark:border-slate-600">
+                    <Activity className="w-4.5 h-4.5" />
+                  </div>
+                  <div>
+                    <h3 className="font-sans tracking-tight font-extrabold text-slate-900 dark:text-white">סימולטור ניסוי לפרומפטים</h3>
+                    <p className="text-[10px] uppercase tracking-widest font-mono mt-0.5 text-slate-400 dark:text-slate-400">בחן את הפרומפט שלך עם Gemini בזמן אמת</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 sm:gap-3">
+                  {/* Model toggle */}
+                  <div className="flex p-1 border font-semibold bg-white text-xs border-slate-200 dark:bg-slate-950 dark:border-slate-700">
+                    <button
+                      onClick={() => setChatModelType("flash")}
+                      className={`px-3 py-1 transition-all ${
+                        chatModelType === "flash"
+                          ? "bg-blue-600 dark:bg-blue-500 text-white  font-bold"
+                          : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white"
+                      }`}
+                    >
+                      Gemini Flash
+                    </button>
+                    <button
+                      onClick={() => setChatModelType("pro")}
+                      className={`px-3 py-1 transition-all ${
+                        chatModelType === "pro"
+                          ? "bg-blue-600 dark:bg-blue-500 text-white  font-bold"
+                          : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white"
+                      }`}
+                      title="מצב חשיבה עמוקה"
+                    >
+                      Gemini Pro
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setIsChatPlaygroundOpen(false);
+                      setChatMessages([]);
+                    }}
+                    className="p-1 hover:bg-slate-100 hover:text-slate-900 text-slate-400 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Chat Bubbles Scroll container */}
+              <div className="flex-1 p-6 overflow-y-auto space-y-4 select-text bg-white/50 text-start dark:bg-slate-950/30">
+                {chatMessages.map((msg) => {
+                  const isBot = msg.role === "assistant";
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`flex ${isBot ? "justify-start" : "justify-end"} items-start gap-2.5`}
+                    >
+                      {isBot && (
+                        <div className="w-8 h-8 border flex items-center justify-center bg-slate-50 text-slate-900 border-slate-200 dark:bg-slate-900 dark:text-white dark:border-slate-700">
+                          <Sparkles className="w-3.5 h-3.5" />
+                        </div>
+                      )}
+
+                      <div
+                        className={`max-w-[80%] p-4 text-sm leading-relaxed border rounded-2xl ${
+                          isBot
+                            ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white border-slate-200 dark:border-slate-700"
+                            : "bg-blue-600 dark:bg-blue-500 text-white  border-transparent font-medium"
+                        }`}
+                      >
+                        <div className="whitespace-pre-wrap">{msg.content}</div>
+                        <span className={`text-[9px] mt-2 block text-end font-mono ${isBot ? "text-slate-400 dark:text-slate-500" : "text-white/60 dark:text-slate-500 dark:text-slate-400"}`}>
+                          {msg.timestamp}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {isChatSending && (
+                  <div className="flex justify-start items-center gap-2.5">
+                    <div className="w-8 h-8 border flex items-center justify-center bg-slate-50 text-slate-900 border-slate-200 dark:bg-slate-900 dark:text-white dark:border-slate-700">
+                      <Sparkles className="w-3.5 h-3.5 animate-spin" />
+                    </div>
+                    <div className="border rounded-2xl px-4 py-3 flex items-center gap-2 bg-white text-slate-500 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-700">
+                      <span className="w-1.5 h-1.5 rounded-full animate-bounce delay-0 bg-blue-600 dark:bg-blue-500" />
+                      <span className="w-1.5 h-1.5 rounded-full animate-bounce delay-150 bg-blue-600 dark:bg-blue-500" />
+                      <span className="w-1.5 h-1.5 rounded-full animate-bounce delay-300 bg-blue-600 dark:bg-blue-500" />
+                      <span>מחשיב ומנתח את תשובת ה-AI...</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Chat Input form */}
+              <div className="p-5 flex gap-2.5 items-center bg-slate-50 border-slate-200 dark:bg-slate-900 dark:border-slate-700">
+                <input
+                  type="text"
+                  placeholder="כתוב הודעה כאן כדי לבחון את תגובת ה-AI..."
+                  value={currentChatPrompt}
+                  onChange={(e) => setCurrentChatPrompt(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") sendChatMessage();
+                  }}
+                  className="flex-1 px-4 py-3 border rounded-2xl outline-none focus:border-slate-300 dark:focus:border-[#F5F5F0] transition-all bg-white text-start border-slate-300 dark:bg-slate-950 dark:border-slate-700"
+                />
+
+                <button
+                  onClick={sendChatMessage}
+                  disabled={!currentChatPrompt.trim() || isChatSending}
+                  className="w-11 h-11 hover:bg-[#333] rounded-xl flex items-center justify-center transition-all shrink-0 disabled:opacity-40 bg-blue-600 dark:bg-blue-500 dark:text-white dark:hover:bg-[#E5E5E0]"
+                >
+                  <Send className="w-4.5 h-4.5 transform rotate-180" />
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+
+      {/* MODAL 4: Compare Prompts */}
+      <AnimatePresence>
+        {isCompareMode && compareSelection.length === 2 && (
+          <div className="fixed inset-0 backdrop-blur-md flex items-center justify-center p-4 z-50 bg-slate-900/70 dark:bg-black/80">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="border shadow-2xl max-w-6xl w-full max-h-[90vh] flex flex-col relative overflow-hidden rounded-2xl bg-slate-50 text-start border-slate-200 dark:bg-slate-900 dark:border-slate-700"
+            >
+              <div className="p-5 flex items-center justify-between bg-white border-slate-200 dark:bg-slate-950 dark:border-slate-700">
+                <h3 className="font-sans font-bold tracking-tight text-slate-900 dark:text-white">
+                  השוואת פרומפטים
+                </h3>
+                <button
+                  onClick={() => setCompareSelection([])}
+                  className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500 dark:hover:bg-slate-800"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full">
+                  {[0, 1].map((idx) => {
+                    const p = compareSelection[idx];
+                    return (
+                      <div key={p.id} className="p-6 rounded-2xl border shadow-sm flex flex-col gap-4 bg-white border-slate-200 dark:bg-slate-950 dark:border-slate-800">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-bold text-slate-900 dark:text-white">{p.title}</h4>
+                          <span className="px-2 py-1 rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                            {p.platform}
+                          </span>
+                        </div>
+                        <div className="flex-1 p-4 rounded-xl border overflow-y-auto whitespace-pre-wrap leading-relaxed font-mono bg-slate-50 text-end border-slate-100 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-800" dir="rtl">
+                          {p.content}
+                        </div>
+                        {p.tags && p.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-auto pt-4">
+                            {p.tags.map(t => (
+                              <span key={t} className="px-2 py-1 rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                                #{t}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+    </div>
+  );
+}
