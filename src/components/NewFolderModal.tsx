@@ -5,11 +5,12 @@ import { motion, AnimatePresence } from 'motion/react';
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (folderName: string) => void;
+  onConfirm: (folderName: string, color?: string) => void;
 }
 
 export const NewFolderModal: React.FC<Props> = ({ isOpen, onClose, onConfirm }) => {
   const [name, setName] = useState('');
+  const [color, setColor] = useState('#4f46e5'); // default indigo-600
 
   if (!isOpen) return null;
 
@@ -51,7 +52,7 @@ export const NewFolderModal: React.FC<Props> = ({ isOpen, onClose, onConfirm }) 
               autoFocus
               onKeyDown={e => {
                 if (e.key === 'Enter' && name.trim()) {
-                  onConfirm(name.trim());
+                  onConfirm(name.trim(), color);
                   setName('');
                   onClose();
                 }
@@ -69,7 +70,7 @@ export const NewFolderModal: React.FC<Props> = ({ isOpen, onClose, onConfirm }) 
             <button
               onClick={() => {
                 if (name.trim()) {
-                  onConfirm(name.trim());
+                  onConfirm(name.trim(), color);
                   setName('');
                   onClose();
                 }

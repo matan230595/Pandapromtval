@@ -31,7 +31,7 @@ export const EmptyState: React.FC<Props> = ({ type, searchQuery, folderName }) =
   }[type];
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center h-full min-h-[400px]">
+    <div className="flex-1 flex flex-col items-center justify-center p-12 text-center h-full min-h-[400px] border-2 border-dashed border-slate-200/60 dark:border-white/10 rounded-3xl m-4 glass-panel">
       <motion.div 
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -55,7 +55,7 @@ export const EmptyState: React.FC<Props> = ({ type, searchQuery, folderName }) =
         initial={{ y: 10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.1 }}
-        className="text-xl font-bold text-slate-900 dark:text-white mb-2"
+        className="text-2xl font-extrabold text-slate-900 dark:text-white mb-3"
       >
         {content.title}
       </motion.h3>

@@ -1,52 +1,86 @@
 const fs = require('fs');
 let code = fs.readFileSync('src/App.tsx', 'utf8');
 
-const regexEditorGrid = /<div className="grid grid-cols-2 gap-4">\s*<div>\s*<label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">פלטפורמה מומלצת<\/label>\s*<select[\s\S]*?<\/select>\s*<\/div>\s*<div>[\s\S]*?<\/select>\s*<\/div>\s*<\/div>/;
+const magicState = `const [isMagicSuggesting, setIsMagicSuggesting] = useState(false);
+  const [magicSuggestions, setMagicSuggestions] = useState<any>(null);`;
 
-const replacementGrid = `<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">פלטפורמה מומלצת</label>
-                            <select 
-                              value={editingPrompt?.platform || "General"}
-                              onChange={e => setEditingPrompt({...editingPrompt, platform: e.target.value})}
-                              className="w-full bg-slate-50 dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500/50 text-sm text-slate-900 dark:text-white"
-                            >
-                              {Object.keys(PLATFORMS).map(k => <option key={k} value={k}>{PLATFORMS[k].name}</option>)}
-                            </select>
-                          </div>
-                          
-                          <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">נושא (Topic)</label>
-                            <select 
-                              value={editingPrompt?.topic || "General"}
-                              onChange={e => setEditingPrompt({...editingPrompt, topic: e.target.value})}
-                              className="w-full bg-slate-50 dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500/50 text-sm text-slate-900 dark:text-white"
-                            >
-                              {['General', 'Finance', 'Tech', 'Marketing', 'Sales', 'HR', 'Creative', 'Academic', 'Writing', 'SEO', 'Coding'].map(t => <option key={t} value={t}>{t}</option>)}
-                            </select>
-                          </div>
+code = code.replace(
+  'const [isReadingMode, setIsReadingMode] = useState(false);',
+  'const [isReadingMode, setIsReadingMode] = useState(false);\n  ' + magicState
+);
 
-                          <div>
-                            <div className="flex items-center justify-between mb-2">
-                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center">
-                                תיקייה
-                                {folders.length === 0 && (
-                                  <button type="button" onClick={() => setIsNewFolderModalOpen(true)} className="ml-2 text-blue-500 hover:text-blue-600">
-                                    + צור תיקייה
-                                  </button>
-                                )}
-                              </label>
-                            </div>
-                            <select 
-                              value={editingPrompt?.folder || (folders.length > 0 ? folders[0].id : '')}
-                              onChange={e => setEditingPrompt({...editingPrompt, folder: e.target.value})}
-                              className="w-full bg-slate-50 dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500/50 text-sm text-slate-900 dark:text-white"
-                            >
-                              {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-                            </select>
-                          </div>
-                        </div>`;
+const magicFunction = `
+  const handleMagicSuggest = async () => {
+    if (!editingPrompt.content?.trim()) return;
+    setIsMagicSuggesting(true);
+    try {
+      const res = await fetch("/api/gemini/suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: editingPrompt.content, language: isRtl(editingPrompt.content || '') ? 'he' : 'en' })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMagicSuggestions(data);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsMagicSuggesting(false);
+    }
+  };
+`;
 
-code = code.replace(regexEditorGrid, replacementGrid);
+code = code.replace(
+  'const handleSemanticSearch',
+  magicFunction + '\n  const handleSemanticSearch'
+);
+
+const editorTools = `
+                  <div className="flex items-center gap-2 mb-4">
+                    <button onClick={handleMagicSuggest} disabled={isMagicSuggesting || !editingPrompt.content?.trim()} className="px-3 py-1.5 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg text-xs font-bold hover:shadow-md transition-all flex items-center gap-1 disabled:opacity-50">
+                      {isMagicSuggesting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
+                      {isMagicSuggesting ? 'מנתח...' : 'שפר פרומפט (Magic)'}
+                    </button>
+                    <div className="px-3 py-1.5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 rounded-lg text-xs font-medium flex items-center gap-1">
+                      <BarChart2 className="w-3 h-3" />
+                      ~{Math.ceil((editingPrompt.content || '').length / 4)} טוקנים
+                    </div>
+                  </div>
+                  {magicSuggestions && (
+                    <div className="mb-4 p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700/50 rounded-xl">
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="text-xs font-bold text-purple-800 dark:text-purple-300 flex items-center gap-1">
+                          <Sparkles className="w-3 h-3" /> תובנות AI:
+                        </h4>
+                        <button onClick={() => setMagicSuggestions(null)} className="text-purple-400 hover:text-purple-600">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                      {magicSuggestions.missingRole && (
+                        <p className="text-xs text-purple-700 dark:text-purple-400 mb-1">
+                          <strong>תפקיד חסר:</strong> {magicSuggestions.missingRole}
+                        </p>
+                      )}
+                      {magicSuggestions.suggestedVariables?.length > 0 && (
+                        <p className="text-xs text-purple-700 dark:text-purple-400 mb-1">
+                          <strong>משתנים שכדאי להוסיף:</strong> {magicSuggestions.suggestedVariables.map((v:string) => \`$(\${v})\`).join(', ')}
+                        </p>
+                      )}
+                      {magicSuggestions.improvements?.length > 0 && (
+                        <ul className="text-xs text-purple-700 dark:text-purple-400 list-disc list-inside">
+                          {magicSuggestions.improvements.map((imp:string, i:number) => (
+                            <li key={i}>{imp}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+`;
+
+code = code.replace(
+  '<label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">תוכן הפרומפט</label>',
+  '<label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">תוכן הפרומפט</label>\n' + editorTools
+);
 
 fs.writeFileSync('src/App.tsx', code);

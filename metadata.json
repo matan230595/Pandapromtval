@@ -1,5 +1,5 @@
 {
-  "name": "Prompt Vault",
+  "name": "PandaPrompt",
   "description": "אפליקציה מתקדמת לשמירה, ארגון, חיפוש ושימוש חוזר בפרומפטים ל-AI בעברית.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

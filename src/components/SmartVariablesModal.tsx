@@ -1,14 +1,16 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, Copy, Check, Sparkles } from 'lucide-react';
+import { X, Copy, Check, Sparkles, Play } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   originalText: string;
+  onComplete?: (text: string) => void;
+  actionType?: 'copy' | 'test';
 }
 
-export const SmartVariablesModal: React.FC<Props> = ({ isOpen, onClose, originalText }) => {
+export const SmartVariablesModal: React.FC<Props> = ({ isOpen, onClose, originalText, onComplete, actionType = 'copy' }) => {
   const variables = useMemo(() => {
     const regex = /\$\(([^)]+)\)|\{\{([^}]+)\}\}/g;
     const vars = new Set<string>();
@@ -40,7 +42,11 @@ export const SmartVariablesModal: React.FC<Props> = ({ isOpen, onClose, original
   }, [originalText, variables, values]);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(previewText);
+    if (onComplete) {
+      onComplete(previewText);
+    } else {
+      navigator.clipboard.writeText(previewText);
+    }
     setCopied(true);
     setTimeout(() => {
       setCopied(false);
@@ -99,7 +105,7 @@ export const SmartVariablesModal: React.FC<Props> = ({ isOpen, onClose, original
             
             <div className="flex-1 flex flex-col">
               <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5">תצוגה מקדימה</label>
-              <div className="flex-1 bg-slate-50 dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 rounded-xl p-4 font-mono text-sm leading-relaxed text-slate-700 dark:text-slate-300 overflow-y-auto whitespace-pre-wrap selection:bg-blue-200 dark:selection:bg-blue-900/50">
+              <div className="flex-1 bg-slate-50 dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 rounded-2xl p-4 font-sans text-sm sm:text-base leading-relaxed text-slate-800 dark:text-slate-200 overflow-y-auto whitespace-pre-wrap selection:bg-indigo-500/20">
                 {previewText}
               </div>
             </div>
@@ -110,8 +116,8 @@ export const SmartVariablesModal: React.FC<Props> = ({ isOpen, onClose, original
               onClick={handleCopy}
               className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium text-white transition-all shadow-sm ${copied ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'}`}
             >
-              {copied ? <Check className="w-4.5 h-4.5" /> : <Copy className="w-4.5 h-4.5" />}
-              {copied ? "הועתק!" : "העתק פרומפט סופי"}
+              {copied ? <Check className="w-5 h-5" /> : (actionType === 'test' ? <Play className="w-5 h-5" /> : <Copy className="w-5 h-5" />)}
+              {copied ? (actionType === 'test' ? "מפעיל בדיקה..." : "הועתק!") : (actionType === 'test' ? "התחל בדיקה" : "העתק פרומפט סופי")}
             </button>
           </div>
         </motion.div>

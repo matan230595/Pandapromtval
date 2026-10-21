@@ -21,7 +21,10 @@ export const UserProfileView: React.FC<Props> = ({ onShowToast }) => {
 
   useEffect(() => {
     const loadProfile = async () => {
-      if (!auth.currentUser) return;
+      if (!auth?.currentUser) {
+        setIsLoading(false);
+        return;
+      }
       try {
         const docRef = doc(db, 'users', auth.currentUser.uid);
         const docSnap = await getDoc(docRef);
@@ -83,10 +86,24 @@ export const UserProfileView: React.FC<Props> = ({ onShowToast }) => {
     return <div className="p-8 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>;
   }
 
+  if (!auth?.currentUser && !isLoading) {
+    return (
+      <div className="max-w-2xl mx-auto p-4 sm:p-8" dir="rtl">
+        <div className="bg-white dark:bg-[#111] border border-slate-200 dark:border-white/10 rounded-3xl p-10 text-center shadow-sm">
+          <div className="w-24 h-24 mx-auto mb-6 relative">
+            <img src="/logo.png" alt="Panda Mascot" className="w-full h-full object-contain drop-shadow-md" />
+          </div>
+          <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-4">עליך להתחבר כדי לצפות בפרופיל</h2>
+          <p className="text-slate-500 mb-8">התחבר עם Google כדי לשמור את הפרופיל שלך, לשתף פרומפטים עם הקהילה, ולנהל מועדפים.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl mx-auto p-4 sm:p-8" dir="rtl">
       <div className="bg-white dark:bg-[#111] border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-10 shadow-sm">
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-8">הפרופיל שלי</h2>
+        <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-8">הפרופיל שלי</h2>
         
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-8 mb-8">
           <div className="relative group">

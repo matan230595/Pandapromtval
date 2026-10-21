@@ -1,3 +1,4 @@
+import { apiFetch } from '../utils/api';
 import React, { useState } from 'react';
 import { X, Wand2, Loader2, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -29,7 +30,7 @@ export const PromptGeneratorModal: React.FC<Props> = ({ isOpen, onClose, onCompl
       const description = `סגנון: ${selectedStyle}. נושא/הקשר: ${context}`;
       
             const key = localStorage.getItem("promptvault_gemini_key") || "";
-      const res = await fetch("/api/gemini/enhance", {
+      const res = await apiFetch("/api/gemini/enhance", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
@@ -45,7 +46,7 @@ export const PromptGeneratorModal: React.FC<Props> = ({ isOpen, onClose, onCompl
         throw new Error(data.error || "No text returned");
       }
     } catch (e) {
-      alert("שגיאה ביצירת הפרומפט");
+      // alert disabled in iframe
       console.error(e);
     } finally {
       setIsGenerating(false);

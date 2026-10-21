@@ -1,24 +1,68 @@
-export function getTagColor(tag: string): { bg: string; text: string; border: string } {
+export function getTagColor(tag: string): { bg: string; text: string; border: string; category?: string } {
+  const clean = tag.toLowerCase().trim();
+
+  // 1. Development & Code
+  if (/^(קוד|פיתוח|תכנות|react|python|javascript|typescript|api|sql|backend|frontend|dev|html|css|bug|fix|git|docker)/i.test(clean)) {
+    return {
+      bg: 'bg-emerald-50 dark:bg-emerald-950/40',
+      text: 'text-emerald-700 dark:text-emerald-300',
+      border: 'border-emerald-200 dark:border-emerald-800/40',
+      category: 'code'
+    };
+  }
+
+  // 2. Marketing, SEO & Sales
+  if (/^(שיווק|מכירות|פרסום|קופי|seo|ads|marketing|sales|copywriting|leads|funnel|email|social|facebook|linkedin)/i.test(clean)) {
+    return {
+      bg: 'bg-teal-50 dark:bg-teal-950/40',
+      text: 'text-teal-700 dark:text-teal-300',
+      border: 'border-teal-200 dark:border-teal-800/40',
+      category: 'marketing'
+    };
+  }
+
+  // 3. Creative, Writing & Content
+  if (/^(כתיבה|בלוג|תוכן|סיפור|מאמר|עריכה|תרגום|writing|content|blog|story|article|novel|poem)/i.test(clean)) {
+    return {
+      bg: 'bg-purple-50 dark:bg-purple-950/40',
+      text: 'text-purple-700 dark:text-purple-300',
+      border: 'border-purple-200 dark:border-purple-800/40',
+      category: 'writing'
+    };
+  }
+
+  // 4. AI Art & Visuals
+  if (/^(תמונות|ציור|עיצוב|midjourney|dall-e|flux|art|image|design|photo|render|logo|ui|ux)/i.test(clean)) {
+    return {
+      bg: 'bg-pink-50 dark:bg-pink-950/40',
+      text: 'text-pink-700 dark:text-pink-300',
+      border: 'border-pink-200 dark:border-pink-800/40',
+      category: 'design'
+    };
+  }
+
+  // 5. Productivity, Business & Operations
+  if (/^(ניהול|עסקים|פרודוקטיביות|משימות|אסטרטגיה|business|productivity|ops|agile|scrum|meeting|strategy|finance)/i.test(clean)) {
+    return {
+      bg: 'bg-amber-50 dark:bg-amber-950/40',
+      text: 'text-amber-700 dark:text-amber-300',
+      border: 'border-amber-200 dark:border-amber-800/40',
+      category: 'productivity'
+    };
+  }
+
+  // Fallback hash-based palette
   let hash = 0;
   for (let i = 0; i < tag.length; i++) {
     hash = tag.charCodeAt(i) + ((hash << 5) - hash);
   }
   
   const colors = [
-    { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-400', border: 'border-red-200 dark:border-red-800/30' },
-    { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-700 dark:text-orange-400', border: 'border-orange-200 dark:border-orange-800/30' },
-    { bg: 'bg-amber-100 dark:bg-amber-900/30', text: 'text-amber-700 dark:text-amber-400', border: 'border-amber-200 dark:border-amber-800/30' },
-    { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-400', border: 'border-green-200 dark:border-green-800/30' },
-    { bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-700 dark:text-emerald-400', border: 'border-emerald-200 dark:border-emerald-800/30' },
-    { bg: 'bg-teal-100 dark:bg-teal-900/30', text: 'text-teal-700 dark:text-teal-400', border: 'border-teal-200 dark:border-teal-800/30' },
-    { bg: 'bg-cyan-100 dark:bg-cyan-900/30', text: 'text-cyan-700 dark:text-cyan-400', border: 'border-cyan-200 dark:border-cyan-800/30' },
-    { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-400', border: 'border-blue-200 dark:border-blue-800/30' },
-    { bg: 'bg-indigo-100 dark:bg-indigo-900/30', text: 'text-indigo-700 dark:text-indigo-400', border: 'border-indigo-200 dark:border-indigo-800/30' },
-    { bg: 'bg-violet-100 dark:bg-violet-900/30', text: 'text-violet-700 dark:text-violet-400', border: 'border-violet-200 dark:border-violet-800/30' },
-    { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-700 dark:text-purple-400', border: 'border-purple-200 dark:border-purple-800/30' },
-    { bg: 'bg-fuchsia-100 dark:bg-fuchsia-900/30', text: 'text-fuchsia-700 dark:text-fuchsia-400', border: 'border-fuchsia-200 dark:border-fuchsia-800/30' },
-    { bg: 'bg-pink-100 dark:bg-pink-900/30', text: 'text-pink-700 dark:text-pink-400', border: 'border-pink-200 dark:border-pink-800/30' },
-    { bg: 'bg-rose-100 dark:bg-rose-900/30', text: 'text-rose-700 dark:text-rose-400', border: 'border-rose-200 dark:border-rose-800/30' }
+    { bg: 'bg-indigo-50 dark:bg-indigo-950/40', text: 'text-indigo-700 dark:text-indigo-300', border: 'border-indigo-200 dark:border-indigo-800/40' },
+    { bg: 'bg-blue-50 dark:bg-blue-950/40', text: 'text-blue-700 dark:text-blue-300', border: 'border-blue-200 dark:border-blue-800/40' },
+    { bg: 'bg-violet-50 dark:bg-violet-950/40', text: 'text-violet-700 dark:text-violet-300', border: 'border-violet-200 dark:border-violet-800/40' },
+    { bg: 'bg-rose-50 dark:bg-rose-950/40', text: 'text-rose-700 dark:text-rose-300', border: 'border-rose-200 dark:border-rose-800/40' },
+    { bg: 'bg-cyan-50 dark:bg-cyan-950/40', text: 'text-cyan-700 dark:text-cyan-300', border: 'border-cyan-200 dark:border-cyan-800/40' },
   ];
   
   const index = Math.abs(hash) % colors.length;

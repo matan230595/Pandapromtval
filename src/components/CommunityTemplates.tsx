@@ -16,10 +16,7 @@ const MOCK_COMMUNITY_TEMPLATES: Prompt[] = [
     useCount: 1540,
     language: 'en',
     projectId: null,
-    isReadOnly: true,
-    reviews: [
-      { id: '1', rating: 5, text: 'Amazing prompt!', date: new Date().toISOString() }
-    ]
+    isReadOnly: true
   },
   {
     id: 'comm-2',
@@ -34,10 +31,7 @@ const MOCK_COMMUNITY_TEMPLATES: Prompt[] = [
     useCount: 2310,
     language: 'en',
     projectId: null,
-    isReadOnly: true,
-    reviews: [
-      { id: '2', rating: 4, text: 'Very useful.', date: new Date().toISOString() }
-    ]
+    isReadOnly: true
   },
   {
     id: 'comm-3',
@@ -73,8 +67,7 @@ export const CommunityTemplates: React.FC<Props> = ({ onImport }) => {
       useCount: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      isReadOnly: false,
-      reviews: [] // clear reviews for personal copy
+      isReadOnly: false
     };
     onImport(newPrompt);
   };

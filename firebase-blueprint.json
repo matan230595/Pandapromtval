@@ -1,0 +1,101 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "bio": { "type": "string" },
+        "socialLinks": { "type": "object" },
+        "followers": { "type": "array" },
+        "following": { "type": "array" }
+      }
+    },
+    "Folder": {
+      "title": "Folder",
+      "description": "Folder containing prompts.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "color": { "type": "string" },
+        "icon": { "type": "string" },
+        "sharedWith": { "type": "array" }
+      }
+    },
+    "Prompt": {
+      "title": "Prompt",
+      "description": "A user's prompt.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "platform": { "type": "string" },
+        "tags": { "type": "array" },
+        "folder": { "type": "string" },
+        "projectId": { "type": "string" },
+        "favorite": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "useCount": { "type": "number" },
+        "language": { "type": "string" },
+        "isPublic": { "type": "boolean" }
+      },
+      "required": ["id", "title", "content"]
+    },
+    "PublicPrompt": {
+      "title": "PublicPrompt",
+      "description": "A prompt shared with the community.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "likes": { "type": "array" },
+        "commentsCount": { "type": "number" }
+      }
+    },
+    "PromptComment": {
+      "title": "PromptComment",
+      "description": "A comment on a public prompt.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "promptId": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "promptId", "authorId", "text"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profile documents"
+    },
+    "/users/{userId}/prompts/{promptId}": {
+      "schema": { "$ref": "#/entities/Prompt" },
+      "description": "User private prompts"
+    },
+    "/users/{userId}/folders/{folderId}": {
+      "schema": { "$ref": "#/entities/Folder" },
+      "description": "User private folders"
+    },
+    "/public_prompts/{promptId}": {
+      "schema": { "$ref": "#/entities/PublicPrompt" },
+      "description": "Community public prompts"
+    },
+    "/public_prompts/{promptId}/comments/{commentId}": {
+      "schema": { "$ref": "#/entities/PromptComment" },
+      "description": "Comments on community prompts"
+    }
+  }
+}

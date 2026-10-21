@@ -1,0 +1,232 @@
+1540 (0):                   <div className="flex-1 flex flex-col h-full bg-white dark:bg-[#111] overflow-hidden">
+1541 (0):                     <div className="md:hidden border-b border-slate-100 dark:border-white/5 p-4 shrink-0">
+1542 (0):                       <button onClick={() => setSelectedPromptId(null)} className="flex items-center gap-2 text-slate-500 font-medium hover:text-slate-900 dark:hover:text-white transition-colors">
+1543 (0):                         <ChevronRight className="w-5 h-5" /> חזור לרשימה
+1544 (0):                       </button>
+1545 (0):                     </div>
+1546 (0):                     
+1547 (0):                     <div className="p-6 lg:p-8 border-b border-slate-100 dark:border-white/5 flex flex-col md:flex-row md:items-start justify-between gap-6 shrink-0">
+1548 (0):                       <div className="space-y-3 flex-1 min-w-0">
+1549 (0):                         <div className="flex flex-wrap items-center gap-2">
+1550 (0):                           <span className="text-[10px] px-2 py-0.5 rounded-md font-medium border border-slate-200 dark:border-white/10 text-slate-500">
+1551 (0):                             {Math.max(1, Math.ceil((selectedPrompt.content.match(/\S+/g) || []).length / 200))} דק' קריאה
+1552 (0):                           </span>
+1553 (0):                           <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider ${PLATFORMS[selectedPrompt.platform]?.bgColor} ${PLATFORMS[selectedPrompt.platform]?.textColor}`}>
+1554 (0):                             {PLATFORMS[selectedPrompt.platform]?.name || selectedPrompt.platform}
+1555 (0):                           </span>
+1556 (1):                           {selectedPrompt.folder && (
+1557 (1):                              <span className="text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 flex items-center gap-1">
+1558 (1):                                <FolderIcon className="w-3 h-3" />
+1559 (1):                                {folders.find(f => f.id === selectedPrompt.folder)?.name || 'ללא תיקייה'}
+1560 (1):                              </span>
+1561 (0):                           )}
+1562 (1):                           {(selectedPrompt.tags || []).map(t => (
+1563 (1):                             <span key={t} className={`text-[10px] px-2 py-0.5 rounded-md font-medium border ${getTagColor(t).bg} ${getTagColor(t).text} ${getTagColor(t).border}`}>
+1564 (1):                               {t}
+1565 (1):                             </span>
+1566 (0):                           ))}
+1567 (0):                         </div>
+1568 (0):                         <div className="flex items-center gap-3">
+1569 (0):                           <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight break-words">{selectedPrompt.title}</h1>
+1570 (1):                           {selectedPrompt.isReadOnly && (
+1571 (1):                             <span className="flex items-center gap-1 text-[11px] font-bold px-2 py-1 bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 rounded-lg whitespace-nowrap">
+1572 (1):                               <Lock className="w-3 h-3" />
+1573 (1):                               קריאה בלבד
+1574 (1):                             </span>
+1575 (0):                           )}
+1576 (0):                         </div>
+1577 (0):                       </div>
+1578 (0):                       
+1579 (0):                       <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+1580 (0):                         
+1581 (0):                           <button title="ייצא כ-PDF" onClick={() => handleExportPDF(selectedPrompt)} className="p-2 text-slate-400 hover:text-red-500 transition-colors bg-slate-50 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 rounded-lg">
+1582 (0):                             <FileDown className="w-4.5 h-4.5" />
+1583 (0):                           </button>
+1584 (0): <button title="מצב מיקוד (Focus Mode)" onClick={() => setIsFullscreen(!isFullscreen)} className="p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors bg-slate-50 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 rounded-lg">
+1585 (0):                             {isFullscreen ? <Minimize2 className="w-4.5 h-4.5" /> : <Maximize2 className="w-4.5 h-4.5" />}
+1586 (0):                           </button>
+1587 (0):                           
+1588 (0):                           <button 
+1589 (0):                             title="העבר לתיקייה אחרת" 
+1590 (0):                             onClick={() => { setMoveTargetId(selectedPrompt.id); setIsMoveModalOpen(true); }} 
+1591 (0):                             className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors bg-slate-50 hover:bg-indigo-50 dark:bg-white/5 dark:hover:bg-indigo-900/20 rounded-lg"
+1592 (0):                           >
+1593 (0):                             <FolderOpen className="w-4.5 h-4.5" />
+1594 (0):                           </button>
+1595 (0):                           
+1596 (1):                           {!selectedPrompt.isReadOnly && (
+1597 (1):     <button title="ערוך פרומפט" onClick={() => { setEditingPrompt(selectedPrompt); setIsEditing(true); }} className="p-2 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors bg-slate-50 hover:bg-blue-50 dark:bg-white/5 dark:hover:bg-blue-900/20 rounded-lg">
+1598 (1):       <Edit3 className="w-4.5 h-4.5" />
+1599 (1):     </button>
+1600 (0):   )}
+1601 (0):                         
+1602 (2):                           <button title="העתק כ-Markdown" onClick={() => {
+1603 (2):                             const md = `# ${selectedPrompt.title}\n\n**פלטפורמה:** ${PLATFORMS[selectedPrompt.platform]?.name || selectedPrompt.platform}\n**תגיות:** ${(selectedPrompt.tags||[]).join(', ')}\n\n\`\`\`\n${selectedPrompt.content}\n\`\`\`\n`;
+1604 (2):                             navigator.clipboard.writeText(md);
+1605 (2):                             showToast("הועתק כ-Markdown!", "success");
+1606 (0):                           }} className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors bg-slate-50 hover:bg-indigo-50 dark:bg-white/5 dark:hover:bg-indigo-900/20 rounded-lg">
+1607 (0):                             <FileCode className="w-4.5 h-4.5" />
+1608 (0):                           </button>
+1609 (0):                           
+1610 (0):                           <button 
+1611 (0):                             title={selectedPrompt.isReadOnly ? "פרומפט זה נעול לקריאה בלבד ומוגן מפני עריכה. לחץ כדי לבטל נעילה." : "נעל פרומפט - מונע עריכה בטעות"} 
+1612 (0):                             onClick={() => handleSave({...selectedPrompt, isReadOnly: !selectedPrompt.isReadOnly})} 
+1613 (0):                             className={`p-2 transition-all duration-300 rounded-lg ${selectedPrompt.isReadOnly ? 'text-red-500 bg-red-100 dark:bg-red-900/40 ring-2 ring-red-500/30 animate-[pulse_2s_ease-in-out_infinite]' : 'text-slate-400 hover:text-red-600 bg-slate-50 hover:bg-red-50 dark:bg-white/5 dark:hover:bg-red-900/20'}`}
+1614 (0):                           >
+1615 (0):                             {selectedPrompt.isReadOnly ? <Lock className="w-4.5 h-4.5" /> : <Unlock className="w-4.5 h-4.5" />}
+1616 (0):                           </button>
+1617 (0): 
+1618 (0): <button title="העתק תוכן" onClick={() => handleCopy(selectedPrompt.content, selectedPrompt.id)} className="p-2 text-slate-400 hover:text-green-600 dark:hover:text-green-400 transition-colors bg-slate-50 hover:bg-green-50 dark:bg-white/5 dark:hover:bg-green-900/20 rounded-lg">
+1619 (0):                           <Copy className="w-4.5 h-4.5" />
+1620 (0):                         </button>
+1621 (0):                         <button title="שכפל פרומפט" onClick={() => handleDuplicate(selectedPrompt)} className="p-2 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors bg-slate-50 hover:bg-blue-50 dark:bg-white/5 dark:hover:bg-blue-900/20 rounded-lg">
+1622 (0):                           <CopyPlus className="w-4.5 h-4.5" />
+1623 (0):                         </button>
+1624 (0):                         
+1625 (0):                         <button title="פרסם לקהילה" onClick={() => handlePublishToCommunity(selectedPrompt)} className="p-2 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors bg-slate-50 hover:bg-emerald-50 dark:bg-white/5 dark:hover:bg-emerald-900/20 rounded-lg flex items-center gap-1">
+1626 (0):                           <Globe className="w-4.5 h-4.5" />
+1627 (0):                         </button>
+1628 (1):                         {navigator.share && (
+1629 (1):                           <button title="שתף" onClick={() => navigator.share({ title: selectedPrompt.title, text: selectedPrompt.content }).catch(e => console.error(e))} className="p-2 text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors bg-slate-50 hover:bg-purple-50 dark:bg-white/5 dark:hover:bg-purple-900/20 rounded-lg">
+1630 (1):                             <Share2 className="w-4.5 h-4.5" />
+1631 (1):                           </button>
+1632 (0):                         )}
+1633 (0):                         <button title="הדפס" onClick={() => window.print()} className="p-2 text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors bg-slate-50 hover:bg-orange-50 dark:bg-white/5 dark:hover:bg-orange-900/20 rounded-lg">
+1634 (0):                           <Printer className="w-4.5 h-4.5" />
+1635 (0):                         </button>
+1636 (2):                         <button title="יצא כ-JSON" onClick={() => {
+1637 (2):                           const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(selectedPrompt, null, 2));
+1638 (2):                           const downloadAnchorNode = document.createElement('a');
+1639 (2):                           downloadAnchorNode.setAttribute("href", dataStr);
+1640 (2):                           downloadAnchorNode.setAttribute("download", `${selectedPrompt.title || 'prompt'}.json`);
+1641 (2):                           document.body.appendChild(downloadAnchorNode);
+1642 (2):                           downloadAnchorNode.click();
+1643 (2):                           downloadAnchorNode.remove();
+1644 (0):                         }} className="p-2 text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors bg-slate-50 hover:bg-cyan-50 dark:bg-white/5 dark:hover:bg-cyan-900/20 rounded-lg">
+1645 (0):                           <Download className="w-4.5 h-4.5" />
+1646 (0):                         </button>
+1647 (1):                         {selectedPrompt.history && selectedPrompt.history.length > 1 && (
+1648 (1):                           <button onClick={() => setShowHistory(!showHistory)} className={`p-2 transition-colors rounded-lg ${showHistory ? 'text-amber-600 bg-amber-50 dark:bg-amber-900/20' : 'text-slate-400 hover:text-amber-600 bg-slate-50 hover:bg-amber-50 dark:bg-white/5 dark:hover:bg-amber-900/20'}`}>
+1649 (1):                             <History className="w-4.5 h-4.5" />
+1650 (1):                           </button>
+1651 (0):                         )}
+1652 (0):                         <button title="מחק פרומפט" onClick={() => handleDelete(selectedPrompt.id)} className="p-2 text-slate-400 hover:text-red-600 transition-colors bg-slate-50 hover:bg-red-50 dark:bg-white/5 dark:hover:bg-red-900/20 rounded-lg ml-2">
+1653 (0):                           <Trash2 className="w-4.5 h-4.5" />
+1654 (0):                         </button>
+1655 (0):                         <button title="סגור" onClick={() => setSelectedPromptId(null)} className="p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors bg-slate-50 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 rounded-lg ml-2 md:flex hidden">
+1656 (0):                           <X className="w-4.5 h-4.5" />
+1657 (0):                         </button>
+1658 (0):                       </div>
+1659 (0):                     </div>
+1660 (0): 
+1661 (0):                     <div className="px-6 lg:px-8 py-3 bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5 shrink-0 flex items-center justify-between">
+1662 (0):                       <div className="flex items-center gap-4 text-xs font-medium text-slate-500">
+1663 (0):                         <div className="flex items-center gap-1.5"><Activity className="w-4 h-4 text-blue-500"/> שימושים: {selectedPrompt.useCount || 0}</div>
+1664 (0):                         {selectedPrompt.lastUsedAt && <div className="flex items-center gap-1.5"><History className="w-4 h-4 text-emerald-500"/> שימוש אחרון: {new Date(selectedPrompt.lastUsedAt).toLocaleDateString('he-IL')}</div>}
+1665 (0):                         <div className="flex items-center gap-1 ms-2">
+1666 (1):                           {[1, 2, 3, 4, 5].map((star) => (
+1667 (1):                             <button
+1668 (1):                               key={star}
+1669 (3):                               onClick={(e) => {
+1670 (3):                                 e.stopPropagation();
+1671 (3):                                 handleSave({...selectedPrompt, successRating: star});
+1672 (1):                               }}
+1673 (1):                               className="focus:outline-none hover:scale-110 transition-transform p-0.5"
+1674 (1):                             >
+1675 (1):                               <Star className={`w-4 h-4 ${selectedPrompt.successRating && selectedPrompt.successRating >= star ? 'fill-amber-400 text-amber-400' : 'text-slate-200 dark:text-slate-700'}`} />
+1676 (1):                             </button>
+1677 (0):                           ))}
+1678 (0):                         </div>
+1679 (0):                       </div>
+1680 (0):                     </div>
+1681 (1):                     {showHistory && selectedPrompt.history && selectedPrompt.history.length > 1 ? (
+1682 (1):                       <div className="flex-1 flex flex-col p-6 lg:p-8 bg-slate-50 dark:bg-[#0a0a0a] overflow-hidden">
+1683 (1):                         <div className="flex items-center justify-between mb-4 shrink-0">
+1684 (1):                           <h3 className="font-bold text-sm text-slate-900 dark:text-white">היסטוריית גרסאות</h3>
+1685 (1):                           <div className="flex flex-wrap items-center gap-2">
+1686 (1):                             
+1687 (1):                             <button 
+1688 (3):                               onClick={() => {
+1689 (4):                                 handleSave({
+1690 (4):                                   ...selectedPrompt,
+1691 (4):                                   content: selectedPrompt.history![historyIndex].content
+1692 (3):                                 });
+1693 (3):                                 setShowHistory(false);
+1694 (3):                                 showToast('הפרומפט שוחזר לגרסה הקודמת בהצלחה', 'success');
+1695 (1):                               }}
+1696 (1):                               className="px-3 py-1.5 ml-3 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 text-xs font-bold rounded-lg flex items-center gap-1.5 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors border border-amber-200 dark:border-amber-800/30"
+1697 (1):                             >
+1698 (1):                               <History className="w-3.5 h-3.5" />
+1699 (1):                               שחזר לגרסה זו
+1700 (1):                             </button>
+1701 (1):                             <button onClick={() => setHistoryIndex(Math.min(historyIndex + 1, selectedPrompt.history!.length - 1))}
+1702 (1):  disabled={historyIndex === selectedPrompt.history!.length - 1} className="p-1 text-slate-400 disabled:opacity-30">
+1703 (1):                               <ChevronRight className="w-5 h-5" />
+1704 (1):                             </button>
+1705 (1):                             <span className="text-xs font-mono bg-white dark:bg-[#111] px-2 py-1 rounded-md border border-slate-200 dark:border-white/10">
+1706 (1):                               {new Date(selectedPrompt.history[historyIndex].updatedAt).toLocaleString('he-IL')}
+1707 (1):                             </span>
+1708 (1):                             <button onClick={() => setHistoryIndex(Math.max(historyIndex - 1, 0))} disabled={historyIndex === 0} className="p-1 text-slate-400 disabled:opacity-30">
+1709 (1):                               <ChevronLeft className="w-5 h-5" />
+1710 (1):                             </button>
+1711 (1):                           </div>
+1712 (1):                         </div>
+1713 (1):                         
+1714 (1):                         <div className="text-xs text-slate-500 mb-2 shrink-0">
+1715 (1):                           השוואה בין הגרסה הנוכחית לגרסה מתאריך {new Date(selectedPrompt.history[historyIndex].updatedAt).toLocaleDateString('he-IL')}
+1716 (1):                         </div>
+1717 (1):                         <DiffViewer 
+1718 (1):                           oldText={selectedPrompt.history[historyIndex].content} 
+1719 (1):                           newText={selectedPrompt.content} 
+1720 (1):                         />
+1721 (1):                       </div>
+1722 (1):                     ) : (
+1723 (1):                       <div className="flex-1 p-6 lg:p-8 bg-slate-50 dark:bg-[#0a0a0a] overflow-y-auto selection:bg-blue-200 dark:selection:bg-blue-900/50 flex flex-col 2xl:flex-row gap-8">
+1724 (1):                         <div className="flex-1 flex flex-col min-w-0">
+1725 (1):                           <div className="font-mono text-[15px] leading-8 whitespace-pre-wrap text-slate-800 dark:text-slate-200 flex-1" dir="auto" dangerouslySetInnerHTML={{ __html: Prism.highlight(selectedPrompt.content, Prism.languages.markdown, 'markdown') }} />
+1726 (1): 
+1727 (2):                         {selectedPrompt.exampleOutput && (
+1728 (2):                           <div className="mt-8 pt-6 border-t border-slate-200 dark:border-white/10">
+1729 (2):                             <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 text-indigo-500 flex items-center gap-2">
+1730 (2):                               <Terminal className="w-4 h-4" />
+1731 (2):                               פלט לדוגמה
+1732 (2):                             </label>
+1733 (2):                             <div className="p-4 bg-slate-100/50 dark:bg-white/5 rounded-xl text-[14px] font-mono leading-7 text-slate-700 dark:text-slate-300 whitespace-pre-wrap border border-slate-200/50 dark:border-white/10" dir="auto">
+1734 (2):                               {selectedPrompt.exampleOutput}
+1735 (2):                             </div>
+1736 (2):                           </div>
+1737 (1):                         )}
+1738 (1):                         <div className="mt-8 pt-6 border-t border-slate-200 dark:border-white/10">
+1739 (1):                           <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">פתקים מהירים (Quick Notes)</label>
+1740 (1):                           <textarea
+1741 (1):                             value={selectedPrompt.notes || ''}
+1742 (3):                             onChange={(e) => {
+1743 (3):                               const newPrompts = prompts.map(p => p.id === selectedPrompt.id ? {...p, notes: e.target.value} : p);
+1744 (3):                               setPrompts(newPrompts); // Optimistic UI update
+1745 (1):                             }}
+1746 (1):                             onBlur={(e) => handleSave({...selectedPrompt, notes: e.target.value})}
+1747 (1):                             placeholder="רשום לעצמך הערות, הקשר או טיפים לשימוש בפרומפט הזה..."
+1748 (1):                             className="w-full bg-white dark:bg-[#111] border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500/50 text-sm text-slate-900 dark:text-white resize-y min-h-[80px]"
+1749 (1):                             dir="auto"
+1750 (1):                           />
+1751 (1):                         </div>
+1752 (1):                         <ReviewsSection prompt={selectedPrompt} onSaveReview={handleSaveReview} />
+1753 (1):                       </div>
+1754 (1):                       
+1755 (1):                       {/* Right Sidebar Sandbox */}
+1756 (1):                       <div className="w-full 2xl:w-[400px] shrink-0 border border-slate-200 dark:border-white/10 rounded-2xl bg-white dark:bg-[#111] shadow-sm flex flex-col mt-8 2xl:mt-0 2xl:sticky 2xl:top-0 2xl:h-[calc(100vh-140px)]">
+1757 (1):                          <div className="p-4 border-b border-slate-200 dark:border-white/10 font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+1758 (1):                            <Bot className="w-4 h-4 text-indigo-500" /> Chat Sandbox
+1759 (1):                          </div>
+1760 (1):                          <div className="flex-1 overflow-y-auto p-4">
+1761 (1):                            <PromptTester prompt={selectedPrompt} onUpdate={handleSave} />
+1762 (1):                          </div>
+1763 (1):                       </div>
+1764 (1):                       
+1765 (1):                     </div>
+1766 (1):                 </div>
+1767 (1):               </div>
+1768 (1):             ) : (
+1769 (1):               <div className="flex-1 hidden xl:flex items-center justify-center p-8 bg-slate-50/50 dark:bg-[#0a0a0a]">
+1770 (1):                 <div className="text-center space-y-4">
+1771 (1):                   <div className="w-16 h-16 bg-white dark:bg-[#111] rounded-2xl shadow-sm border border-slate-200 dark:border-white/5 flex items-center justify-center mx-auto text-slate-300 dark:text-slate-700">

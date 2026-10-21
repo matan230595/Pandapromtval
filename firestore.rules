@@ -1,0 +1,85 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() { return request.auth != null; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isOwner(uid) { return isSignedIn() && request.auth.uid == uid; }
+
+    function isValidPrompt(data) {
+      return data.keys().hasAll(['id', 'title', 'content']) 
+        && data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 200
+        && data.content is string && data.content.size() <= 50000;
+    }
+
+    function isValidFolder(data) {
+      return data.keys().hasAll(['id', 'name'])
+        && data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() <= 100;
+    }
+
+    function isValidPublicPrompt(data) {
+      return data.keys().hasAll(['id', 'authorId', 'title', 'content'])
+        && data.id is string && data.id.size() <= 128
+        && data.authorId == request.auth.uid
+        && data.title is string && data.title.size() <= 200
+        && data.content is string && data.content.size() <= 50000;
+    }
+
+    function isValidComment(data) {
+      return data.keys().hasAll(['id', 'promptId', 'authorId', 'text'])
+        && data.id is string && data.id.size() <= 128
+        && data.promptId is string && data.promptId.size() <= 128
+        && data.authorId == request.auth.uid
+        && data.text is string && data.text.size() <= 5000;
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+
+      match /prompts/{promptId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidPrompt(incoming());
+        allow update: if isOwner(userId) && isValidPrompt(incoming());
+        allow delete: if isOwner(userId);
+      }
+
+      match /folders/{folderId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidFolder(incoming());
+        allow update: if isOwner(userId) && isValidFolder(incoming());
+        allow delete: if isOwner(userId);
+      }
+    }
+
+    match /public_prompts/{promptId} {
+      allow read: if true; 
+      allow create: if isSignedIn() && isValidPublicPrompt(incoming());
+      allow update: if isSignedIn() && (
+        (existing().authorId == request.auth.uid && isValidPublicPrompt(incoming())) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'commentsCount', 'ratings', 'ratingsCount', 'averageRating', 'trendingScore']))
+      );
+      allow delete: if isSignedIn() && existing().authorId == request.auth.uid;
+
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if isSignedIn() && isValidComment(incoming());
+        allow update: if isSignedIn() && existing().authorId == request.auth.uid && isValidComment(incoming());
+        allow delete: if isSignedIn() && existing().authorId == request.auth.uid;
+      }
+    }
+
+    match /reports/{reportId} {
+      allow create: if isSignedIn() || true;
+      allow read, update, delete: if false;
+    }
+  }
+}

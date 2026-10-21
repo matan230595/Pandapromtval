@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Tags, X } from 'lucide-react';
+import { Tags, X, Plus, Trash2, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { getTagColor } from '../utils/colors';
+import { Prompt } from '../types';
 
 interface Props {
   isOpen: boolean;
@@ -9,9 +10,11 @@ interface Props {
   allTags: string[];
   count: number;
   onConfirm: (tagsToAdd: string[], tagsToRemove: string[]) => void;
+  selectedPrompts?: Prompt[];
 }
 
-export const BulkTagModal: React.FC<Props> = ({ isOpen, onClose, allTags, count, onConfirm }) => {
+export const BulkTagModal: React.FC<Props> = ({ isOpen, onClose, allTags, count, onConfirm, selectedPrompts = [] }) => {
+  const [activeTab, setActiveTab] = useState<'add' | 'remove'>('add');
   const [selectedToAdd, setSelectedToAdd] = useState<string[]>([]);
   const [selectedToRemove, setSelectedToRemove] = useState<string[]>([]);
   const [newTag, setNewTag] = useState('');
@@ -23,7 +26,6 @@ export const BulkTagModal: React.FC<Props> = ({ isOpen, onClose, allTags, count,
       setSelectedToAdd(selectedToAdd.filter(t => t !== tag));
     } else {
       setSelectedToAdd([...selectedToAdd, tag]);
-      setSelectedToRemove(selectedToRemove.filter(t => t !== tag));
     }
   };
 
@@ -32,7 +34,6 @@ export const BulkTagModal: React.FC<Props> = ({ isOpen, onClose, allTags, count,
       setSelectedToRemove(selectedToRemove.filter(t => t !== tag));
     } else {
       setSelectedToRemove([...selectedToRemove, tag]);
-      setSelectedToAdd(selectedToAdd.filter(t => t !== tag));
     }
   };
 
@@ -40,16 +41,25 @@ export const BulkTagModal: React.FC<Props> = ({ isOpen, onClose, allTags, count,
     if (e.key === 'Enter' && newTag.trim()) {
       e.preventDefault();
       const tag = newTag.trim();
-      if (!allTags.includes(tag) && !selectedToAdd.includes(tag)) {
+      if (!selectedToAdd.includes(tag)) {
         setSelectedToAdd([...selectedToAdd, tag]);
-      } else if (allTags.includes(tag)) {
-        handleToggleAdd(tag);
       }
       setNewTag('');
     }
   };
 
-  const allAvailableTags = Array.from(new Set([...allTags, ...selectedToAdd]));
+  const handleExportJson = () => {
+    const dataToExport = selectedPrompts.length > 0 ? selectedPrompts : [];
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataToExport, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `prompts_backup_${Date.now()}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  const allAvailableTags = Array.from(new Set([...(allTags || []), ...selectedToAdd]));
 
   return (
     <AnimatePresence>
@@ -71,71 +81,120 @@ export const BulkTagModal: React.FC<Props> = ({ isOpen, onClose, allTags, count,
           <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-white/5">
             <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Tags className="w-4 h-4 text-blue-500" />
-              עריכת תגיות ({count} פריטים)
+              ניהול תגיות מרוכז ({count} פריטים נבחרו)
             </h3>
             <button onClick={onClose} className="text-slate-400 hover:text-slate-700 dark:hover:text-white">
               <X className="w-5 h-5" />
             </button>
           </div>
+
+          {/* Mode Tabs */}
+          <div className="flex border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02]">
+            <button
+              onClick={() => setActiveTab('add')}
+              className={`flex-1 py-2.5 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors border-b-2 ${
+                activeTab === 'add' 
+                  ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-white dark:bg-[#161616]' 
+                  : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-white'
+              }`}
+            >
+              <Plus className="w-3.5 h-3.5" />
+              הוספת תגיות ({selectedToAdd.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('remove')}
+              className={`flex-1 py-2.5 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors border-b-2 ${
+                activeTab === 'remove' 
+                  ? 'border-red-600 text-red-600 dark:text-red-400 bg-white dark:bg-[#161616]' 
+                  : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-white'
+              }`}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              הסרת תגיות ({selectedToRemove.length})
+            </button>
+          </div>
           
           <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
-            <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">הוסף תגית חדשה</label>
-              <input 
-                type="text"
-                value={newTag}
-                onChange={e => setNewTag(e.target.value)}
-                onKeyDown={handleAddNewTag}
-                placeholder="הקלד שם תגית ולחץ Enter..."
-                className="w-full bg-slate-50 dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500/50 text-sm text-slate-900 dark:text-white"
-              />
-            </div>
+            {activeTab === 'add' ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">הקלד תגית חדשה להוספה</label>
+                  <input 
+                    type="text"
+                    value={newTag}
+                    onChange={e => setNewTag(e.target.value)}
+                    onKeyDown={handleAddNewTag}
+                    placeholder="הקלד שם תגית ולחץ Enter..."
+                    className="w-full bg-slate-50 dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500/50 text-sm text-slate-900 dark:text-white"
+                  />
+                </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">תגיות זמינות</label>
-              <div className="flex flex-wrap gap-2">
-                {allAvailableTags.map(tag => {
-                  const colors = getTagColor(tag);
-                  const isAdding = selectedToAdd.includes(tag);
-                  const isRemoving = selectedToRemove.includes(tag);
-                  
-                  return (
-                    <div key={tag} className={`flex items-center rounded-lg border text-sm transition-colors ${
-                      isAdding ? 'border-green-500/50 bg-green-50 dark:bg-green-500/10' : 
-                      isRemoving ? 'border-red-500/50 bg-red-50 dark:bg-red-500/10' : 
-                      'border-slate-200 dark:border-white/10 bg-white dark:bg-white/5'
-                    }`}>
-                      <button 
-                        onClick={() => handleToggleAdd(tag)}
-                        className={`px-3 py-1.5 font-medium transition-colors ${
-                          isAdding ? 'text-green-700 dark:text-green-400' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-                        }`}
-                        title="הוסף לכל הנבחרים"
-                      >
-                        {isAdding ? '+ ' : ''}{tag}
-                      </button>
-                      <div className="w-px h-4 bg-slate-200 dark:bg-white/10" />
-                      <button 
-                        onClick={() => handleToggleRemove(tag)}
-                        className={`px-2 py-1.5 transition-colors ${
-                          isRemoving ? 'text-red-600 dark:text-red-400' : 'text-slate-400 hover:text-red-500'
-                        }`}
-                        title="הסר מכל הנבחרים"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  );
-                })}
-                {allAvailableTags.length === 0 && (
-                  <div className="text-sm text-slate-400">אין תגיות זמינות</div>
-                )}
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">בחר תגיות קיימות להוספה</label>
+                  <div className="flex flex-wrap gap-2">
+                    {allAvailableTags.map(tag => {
+                      const isSelected = selectedToAdd.includes(tag);
+                      return (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => handleToggleAdd(tag)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 ${
+                            isSelected 
+                              ? 'bg-blue-600 text-white border-blue-600 shadow-sm' 
+                              : 'bg-white dark:bg-white/5 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:border-blue-400'
+                          }`}
+                        >
+                          {isSelected && <span className="text-[10px]">✓</span>}
+                          {tag}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* JSON Export Backup Option */}
+                <div className="pt-2 border-t border-slate-100 dark:border-white/5">
+                  <button
+                    type="button"
+                    onClick={handleExportJson}
+                    className="w-full py-2.5 px-4 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 rounded-xl text-xs font-bold border border-emerald-200 dark:border-emerald-800/50 flex items-center justify-center gap-2 transition-colors"
+                  >
+                    <Download className="w-4 h-4" />
+                    ייצא פרומפטים נבחרים ותגיות לקובץ JSON (גיבוי)
+                  </button>
+                </div>
               </div>
-            </div>
-            
-            <div className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-white/5 p-3 rounded-lg border border-slate-100 dark:border-white/5">
-              <strong>מקרא:</strong> לחץ על שם התגית כדי <strong>להוסיף</strong> אותה לפריטים. לחץ על ה-X לידה כדי <strong>להסיר</strong> אותה מהפריטים.
-            </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="text-xs text-slate-500 dark:text-slate-400">
+                  בחר אילו תגיות ברצונך להסיר מכל הפרומפטים שנבחרו:
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {(allTags || []).map(tag => {
+                    const isSelected = selectedToRemove.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => handleToggleRemove(tag)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 ${
+                          isSelected 
+                            ? 'bg-red-600 text-white border-red-600 shadow-sm' 
+                            : 'bg-white dark:bg-white/5 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:border-red-400'
+                        }`}
+                      >
+                        {isSelected && <span className="text-[10px]">✕</span>}
+                        {tag}
+                      </button>
+                    );
+                  })}
+                  {(!allTags || allTags.length === 0) && (
+                    <div className="text-sm text-slate-400">אין תגיות זמינות במערכת</div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="p-4 border-t border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-[#0a0a0a]/50 flex justify-end gap-2">
@@ -155,7 +214,7 @@ export const BulkTagModal: React.FC<Props> = ({ isOpen, onClose, allTags, count,
               disabled={selectedToAdd.length === 0 && selectedToRemove.length === 0}
               className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 shadow-sm disabled:opacity-50"
             >
-              החל שינויים
+              החל שינויים ({selectedToAdd.length + selectedToRemove.length})
             </button>
           </div>
         </motion.div>
